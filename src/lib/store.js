@@ -16,7 +16,7 @@ function seed() {
     checks: {},
     logs: {},
     salah: {},
-    startBalance: 236,
+    startBalance: 0,
   };
 }
 
@@ -31,7 +31,7 @@ function load() {
       checks: s.checks || {},
       logs: s.logs || {},
       salah: s.salah || {},
-      startBalance: Number.isFinite(s.startBalance) ? s.startBalance : 236,
+      startBalance: Number.isFinite(s.startBalance) ? s.startBalance : 0,
     };
   } catch {
     return seed();

@@ -25,6 +25,8 @@ import { sfx, isMuted, setMuted, onMuteChange } from "./lib/sound.js";
 import { loadPrayerTimes, MAIN, SALAH, prayerName } from "./lib/prayer.js";
 import { SalahCard, PrayerAlarm, PrayerTimesCard } from "./components/Salah.jsx";
 import { SettingsPanel, GearButton, loadSettings, saveSettings } from "./components/Settings.jsx";
+import Lock from "./components/Lock.jsx";
+import { hasPin } from "./lib/lock.js";
 import { weekData, shiftKey, parseKey, dayStats, streak as perfectStreak, salahStreak } from "./lib/week.js";
 
 // The angry cube hits the screen: a soft glow where it hit and a smooth, fading page shake.
@@ -116,6 +118,10 @@ export default function App() {
   const [selectedKey, setSelectedKey] = useState(dateKey(now));
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
+  // PIN lock: first open = choose a PIN, later opens = enter it; nothing else shows until then
+  const [locked, setLocked] = useState(true);
+  const [lockMode] = useState(() => (hasPin() ? "unlock" : "setup"));
+  const [changingPin, setChangingPin] = useState(false);
 
   const [flash, setFlash] = useState(false);
   // one counter per badge, so only the streak that was just completed pops
@@ -269,6 +275,10 @@ export default function App() {
           settings={settings}
           onChange={changeSettings}
           onClose={() => setSettingsOpen(false)}
+          onChangePin={() => {
+            setSettingsOpen(false);
+            setChangingPin(true);
+          }}
           onTestAlarm={() => {
             setSettingsOpen(false);
             setAlarmTest(Date.now());
@@ -290,7 +300,9 @@ export default function App() {
           }}
         />
       )}
-      {loading && <Loader onLift={() => setReady(true)} onDone={() => setLoading(false)} />}
+      {locked && <Lock mode={lockMode} onDone={() => setLocked(false)} />}
+      {changingPin && <Lock mode="change" onDone={() => setChangingPin(false)} onCancel={() => setChangingPin(false)} />}
+      {!locked && loading && <Loader onLift={() => setReady(true)} onDone={() => setLoading(false)} />}
       {ready && (
       <main className="app">
         <Hero streak={heldStreak?.h ?? streakDays} salahStreak={heldStreak?.s ?? salahDays} pulse={pulse.h} salahPulse={pulse.s} showVerse={settings.verse} showQuote={settings.quote} />

@@ -27,6 +27,12 @@ Run it with `npm run dev`: the prayer times are read from namazvakitleri.com.tr 
 - Week, month and all-time charts, a day-by-day table, streaks and a celebration when everything is done.
 - Settings (gear, top right): alarm, prayer times, salah table, verse and quote on or off, plus an alarm test.
 
+## PIN lock
+
+The first time you open the app you choose your own 10-digit PIN; after that the app asks for it every time it opens. The PIN is never stored: only a salted PBKDF2-SHA-256 hash of it, in your own browser. After 5 wrong tries the app makes you wait (30 s, then longer). If you forget it, "Forgot PIN?" deletes the app's data on that device so you can start again; it cannot be recovered. You can change it in Settings.
+
+The PIN stops other people using your computer from opening the app. It does not encrypt the saved data, so someone with technical access to your browser's storage could still read it.
+
 ## Privacy
 
 Everything you enter is saved only in your own browser (localStorage) on your own device. The app has no accounts, no server and no database, and it never sends your data anywhere. It only fetches public content: prayer times (namazvakitleri.com.tr), Quran verses (api.alquran.cloud), quotes (api.quotable.kurokeita.dev) and fonts (Google Fonts). Clearing your browser data deletes your entries.

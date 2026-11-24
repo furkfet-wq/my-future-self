@@ -47,7 +47,7 @@ function Switch({ label, hint, on, onChange }) {
   );
 }
 
-export function SettingsPanel({ settings, onChange, onClose, onTestAlarm }) {
+export function SettingsPanel({ settings, onChange, onClose, onTestAlarm, onChangePin }) {
   const root = useRef(null);
   const set = (k) => (v) => onChange({ ...settings, [k]: v });
 
@@ -84,6 +84,13 @@ export function SettingsPanel({ settings, onChange, onClose, onTestAlarm }) {
         <Switch label="Salah table" hint="The grid where you tick each prayer" on={settings.salahTable} onChange={set("salahTable")} />
         <Switch label="Quran verse" hint="Verse of the day next to the cube" on={settings.verse} onChange={set("verse")} />
         <Switch label="Motivation quote" hint="Quote next to the cube" on={settings.quote} onChange={set("quote")} />
+        <div className="st-test st-pin">
+          <div>
+            <b>PIN</b>
+            <span>Change the 10-digit PIN that unlocks the app</span>
+          </div>
+          <button onClick={onChangePin}>Change PIN</button>
+        </div>
         <div className="st-test">
           <div>
             <b>Test alarm</b>

@@ -7,6 +7,9 @@ import { dateKey } from "./dates.js";
    aksam = Maghrib, yatsi = Isha). */
 
 const PAGE = "/namaz/en/city/3170/coventry-prayer-times";
+// On the live site (GitHub Pages) a daily GitHub job saves the same times as prayer-times.json.
+const ENV = import.meta.env || {};
+const STATIC_FILE = `${ENV.BASE_URL || "/"}prayer-times.json`;
 const CACHE = "mfs-prayer-v1";
 const REFRESH_MS = 6 * 3600 * 1000;
 
@@ -28,7 +31,10 @@ export const prayerName = (id) => NAMES[id] || id;
 function parsePage(html) {
   const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
   if (!m) throw new Error("Prayer page changed (no data block)");
-  const rows = JSON.parse(m[1])?.props?.pageProps?.data?.PrayerTimes;
+  return parseRows(JSON.parse(m[1])?.props?.pageProps?.data?.PrayerTimes);
+}
+
+function parseRows(rows) {
   if (!Array.isArray(rows) || !rows.length) throw new Error("Prayer page changed (no times)");
   const days = {};
   const hhmm = /^\d{2}:\d{2}$/;
@@ -53,12 +59,13 @@ export async function loadPrayerTimes({ force = false } = {}) {
   const today = dateKey(new Date());
   if (!force && cached?.days?.[today] && Date.now() - cached.at < REFRESH_MS) return { days: cached.days, at: cached.at, fresh: false };
   try {
-    const res = await fetch(PAGE, { headers: { Accept: "text/html" } });
+    const live = !ENV.DEV && ENV.PROD;
+    const res = await fetch(live ? `${STATIC_FILE}?d=${today}` : PAGE, { headers: { Accept: live ? "application/json" : "text/html" } });
     if (!res.ok) throw new Error(`Prayer site answered ${res.status}`);
     // keep last week's saved days (offline fallback) plus the fresh ones; older days are dropped
     const keepFrom = shift(today, -7);
     const old = Object.fromEntries(Object.entries(cached?.days || {}).filter(([k]) => k >= keepFrom));
-    const days = { ...old, ...parsePage(await res.text()) };
+    const days = { ...old, ...(live ? parseRows((await res.json()).rows) : parsePage(await res.text())) };
     const at = Date.now();
     try {
       localStorage.setItem(CACHE, JSON.stringify({ at, days }));

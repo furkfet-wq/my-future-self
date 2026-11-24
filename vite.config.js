@@ -13,6 +13,8 @@ const proxy = {
 };
 
 export default defineConfig({
+  // GitHub Pages serves the app from /my-future-self/
+  base: process.env.GITHUB_PAGES ? "/my-future-self/" : "/",
   plugins: [react()],
   server: { port: 5173, open: false, proxy },
   preview: { proxy },

@@ -14,6 +14,8 @@ export default function HabitGrid({
   const root = useRef(null);
   const [newName, setNewName] = useState("");
   const [confirmId, setConfirmId] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const [dropAt, setDropAt] = useState(null); // row index the dragged habit will land on
 
   // Full Mon..Sun weeks: slots before the 1st / after the last day show the real days of the
   // previous / next month (dimmed, still clickable), so every week has 7 boxes.
@@ -105,6 +107,59 @@ export default function HabitGrid({
     }));
   }
 
+  // Press on a habit name: a click (no movement) renames it, holding and moving drags the row.
+  function pressName(e, r, id) {
+    if (!editable || e.button !== 0 || e.target.closest("button, input")) return;
+    const sc = root.current;
+    const startY = e.clientY;
+    const rowEls = sc.querySelectorAll(`[data-row="${r}"]`);
+    let dragging = false;
+    let target = r;
+    const holdTimer = setTimeout(() => begin(), 220);
+    function begin() {
+      if (dragging) return;
+      dragging = true;
+      sc.classList.add("hg-dragging");
+      rowEls.forEach((el) => el.classList.add("hg-lift"));
+      sfx.add();
+    }
+    function move(ev) {
+      const dy = ev.clientY - startY;
+      if (!dragging && Math.abs(dy) > 5) begin();
+      if (!dragging) return;
+      ev.preventDefault();
+      rowEls.forEach((el) => (el.style.transform = `translateY(${dy}px)`));
+      const names = [...sc.querySelectorAll(".hg-name")];
+      target = r;
+      names.forEach((n, i) => {
+        const b = n.getBoundingClientRect();
+        if (i < r && ev.clientY < b.top + b.height / 2) target = Math.min(target, i);
+        if (i > r && ev.clientY > b.top + b.height / 2) target = Math.max(target, i);
+      });
+      setDropAt(target === r ? null : target);
+    }
+    function up() {
+      clearTimeout(holdTimer);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      rowEls.forEach((el) => {
+        el.style.transform = "";
+        el.classList.remove("hg-lift");
+      });
+      sc.classList.remove("hg-dragging");
+      setDropAt(null);
+      if (!dragging) return setEditId(id);
+      if (target !== r) {
+        actions.moveHabit(r, target);
+        sfx.done();
+      }
+    }
+    window.addEventListener("pointermove", move, { passive: false });
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  }
+
   function remove(id) {
     if (confirmId !== id) {
       setConfirmId(id);
@@ -161,6 +216,13 @@ export default function HabitGrid({
             checks={checks}
             selectedKey={selectedKey}
             confirming={confirmId === h.id}
+            editing={editId === h.id}
+            dropMark={dropAt === r ? "drop" : ""}
+            onPress={(e) => pressName(e, r, h.id)}
+            onRename={(name) => {
+              if (name.trim() && name.trim() !== h.name) actions.renameHabit(h.id, name);
+              setEditId(null);
+            }}
             onToggle={toggle}
             onRemove={() => remove(h.id)}
           />
@@ -188,11 +250,34 @@ export default function HabitGrid({
   );
 }
 
-function HabitRow({ r, h, info, editable, weeks, month0, checks, selectedKey, confirming, onToggle, onRemove }) {
+function HabitRow({ r, h, info, editable, weeks, month0, checks, selectedKey, confirming, editing, dropMark, onPress, onRename, onToggle, onRemove }) {
   return (
     <>
-      <div className={`hg-name${info?.optional ? " opt" : ""}${info?.now ? " now" : ""}`} data-row={r}>
-        <span title={h.name}>{h.name}</span>
+      <div
+        className={`hg-name${info?.optional ? " opt" : ""}${info?.now ? " now" : ""}${editable ? " movable" : ""}${dropMark ? " " + dropMark : ""}`}
+        data-row={r}
+        onPointerDown={editable && !editing ? onPress : undefined}
+      >
+        {editing ? (
+          <input
+            className="hg-rename"
+            defaultValue={h.name}
+            maxLength={60}
+            autoFocus
+            aria-label={`Rename ${h.name}`}
+            onFocus={(e) => e.target.select()}
+            onBlur={(e) => onRename(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Escape") {
+                e.currentTarget.value = h.name;
+                e.currentTarget.blur();
+              }
+            }}
+          />
+        ) : (
+          <span title={editable ? `${h.name} (click to rename, hold and drag to move)` : h.name}>{h.name}</span>
+        )}
         {info?.note && <em className="hg-note">{info.note}</em>}
         {editable && (
           <button

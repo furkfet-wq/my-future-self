@@ -26,7 +26,7 @@ import { loadPrayerTimes, MAIN, SALAH, prayerName } from "./lib/prayer.js";
 import { SalahCard, PrayerAlarm, PrayerTimesCard } from "./components/Salah.jsx";
 import { SettingsPanel, GearButton, loadSettings, saveSettings } from "./components/Settings.jsx";
 import Lock from "./components/Lock.jsx";
-import { hasPin } from "./lib/lock.js";
+import { hasPin, clearPin } from "./lib/lock.js";
 import { weekData, shiftKey, parseKey, dayStats, streak as perfectStreak, salahStreak } from "./lib/week.js";
 
 // The angry cube hits the screen: a soft glow where it hit and a smooth, fading page shake.
@@ -98,9 +98,15 @@ function Flash({ onDone }) {
   return <div className="flash" ref={ref} aria-hidden="true" />;
 }
 
-function Card({ id, title, note, className = "", children }) {
+// Graph cards (gid set) get a small × on hover that asks before hiding them; Settings brings them back.
+function Card({ id, gid, onHide, title, note, className = "", children }) {
   return (
-    <section id={id} className={`card ${className}`}>
+    <section id={id} className={`card ${className}${gid ? " card-hideable" : ""}`}>
+      {gid && onHide && (
+        <button className="card-x" onClick={() => onHide(gid, title)} aria-label={`Hide ${title}`} title="Hide this graph">
+          ×
+        </button>
+      )}
       <h2>
         {title}
         {note && <small>{note}</small>}
@@ -119,9 +125,10 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
   // PIN lock: first open = choose a PIN, later opens = enter it; nothing else shows until then
-  const [locked, setLocked] = useState(true);
-  const [lockMode] = useState(() => (hasPin() ? "unlock" : "setup"));
-  const [changingPin, setChangingPin] = useState(false);
+  // PIN lock is optional and off by default: it only shows if a PIN was turned on in Settings.
+  const [locked, setLocked] = useState(hasPin);
+  const [pinOn, setPinOn] = useState(hasPin);
+  const [pinFlow, setPinFlow] = useState(null); // "setup" | "change" | "remove"
 
   const [flash, setFlash] = useState(false);
   // one counter per badge, so only the streak that was just completed pops
@@ -154,6 +161,10 @@ export default function App() {
     setSettings(s);
     saveSettings(s);
   };
+  const [askHide, setAskHide] = useState(null); // { gid, title }
+  const hidden = settings.hiddenGraphs || {};
+  const hideGraph = (gid, title) => setAskHide({ gid, title });
+  const G = (gid) => ({ gid, onHide: hideGraph });
 
   // Live prayer times (refreshed every 30 minutes, saved copy used when offline)
   const [prayer, setPrayer] = useState({ days: null, error: null });
@@ -275,9 +286,14 @@ export default function App() {
           settings={settings}
           onChange={changeSettings}
           onClose={() => setSettingsOpen(false)}
+          pinOn={pinOn}
+          onPin={(want) => {
+            setSettingsOpen(false);
+            setPinFlow(want ? "setup" : "remove");
+          }}
           onChangePin={() => {
             setSettingsOpen(false);
-            setChangingPin(true);
+            setPinFlow("change");
           }}
           onTestAlarm={() => {
             setSettingsOpen(false);
@@ -300,8 +316,39 @@ export default function App() {
           }}
         />
       )}
-      {locked && <Lock mode={lockMode} onDone={() => setLocked(false)} />}
-      {changingPin && <Lock mode="change" onDone={() => setChangingPin(false)} onCancel={() => setChangingPin(false)} />}
+      {locked && <Lock mode="unlock" onDone={() => setLocked(false)} />}
+      {pinFlow && (
+        <Lock
+          mode={pinFlow}
+          onDone={() => {
+            if (pinFlow === "remove") clearPin();
+            setPinOn(hasPin());
+            setPinFlow(null);
+          }}
+          onCancel={() => setPinFlow(null)}
+        />
+      )}
+      {askHide && (
+        <div className="st hide-ask">
+          <div className="st-back" onClick={() => setAskHide(null)} />
+          <div className="st-panel" role="alertdialog" aria-modal="true" aria-label="Hide graph">
+            <h2>Hide this graph?</h2>
+            <p>Are you sure you want to hide "{askHide.title}"? You can turn it back on in Settings.</p>
+            <div className="hide-row">
+              <button
+                className="hide-yes"
+                onClick={() => {
+                  changeSettings({ ...settings, hiddenGraphs: { ...hidden, [askHide.gid]: true } });
+                  setAskHide(null);
+                }}
+              >
+                Yes, hide it
+              </button>
+              <button onClick={() => setAskHide(null)}>No</button>
+            </div>
+          </div>
+        </div>
+      )}
       {!locked && loading && <Loader onLift={() => setReady(true)} onDone={() => setLoading(false)} />}
       {ready && (
       <main className="app">
@@ -362,57 +409,57 @@ export default function App() {
           </div>
         </div>
         <div className="charts">
-          <Card title="Habits done each day" note="% of habits, Monday to Sunday" className="c-half">
+          {!hidden["wk-dots"] && <Card {...G("wk-dots")} title="Habits done each day" note="% of habits, Monday to Sunday" className="c-half">
             <WeekDotLine data={week} />
-          </Card>
-          <Card title="Rising progress" note="% done per day" className="c-half">
+          </Card>}
+          {!hidden["wk-rise"] && <Card {...G("wk-rise")} title="Rising progress" note="% done per day" className="c-half">
             <WeekRisingBars data={week} />
-          </Card>
-          <Card title="Day stats" note="productivity, feel and money this week" className="c-full">
+          </Card>}
+          {!hidden["wk-stats"] && <Card {...G("wk-stats")} title="Day stats" note="productivity, feel and money this week" className="c-full">
             <WeekStatLine data={week} wide />
-          </Card>
+          </Card>}
         </div>
 
         <div className="wk-head">
           <h2>This month</h2>
         </div>
         <div className="charts">
-          <Card title="Overall" className="c-donut">
+          {!hidden["m-overall"] && <Card {...G("m-overall")} title="Overall" className="c-donut">
             <DonutStat overall={stats.overall} />
-          </Card>
-          <Card title="Daily progress" note="% of habits done each day" className="c-daily">
+          </Card>}
+          {!hidden["m-daily"] && <Card {...G("m-daily")} title="Daily progress" note="% of habits done each day" className="c-daily">
             <DailyProgressBars data={stats.days} />
-          </Card>
-          <Card title="Weekly progress" className="c-weekly">
+          </Card>}
+          {!hidden["m-weekly"] && <Card {...G("m-weekly")} title="Weekly progress" className="c-weekly">
             <WeeklyProgressBars data={stats.weeks} />
-          </Card>
-          <Card title="Habit performance" note="% of the month done per habit" className="c-habits">
+          </Card>}
+          {!hidden["m-habits"] && <Card {...G("m-habits")} title="Habit performance" note="% of the month done per habit" className="c-habits">
             <HabitPerformanceBars data={stats.habits} />
-          </Card>
-          <Card title="Feel and productivity" note="0 to 10" className="c-mood">
+          </Card>}
+          {!hidden["m-mood"] && <Card {...G("m-mood")} title="Feel and productivity" note="0 to 10" className="c-mood">
             <MoodLines data={stats.mood} />
-          </Card>
-          <Card title="Money" note="£ made per day and running total" className="c-money">
+          </Card>}
+          {!hidden["m-money"] && <Card {...G("m-money")} title="Money" note="£ made per day and running total" className="c-money">
             <MoneyChart data={stats.money.daily} balance={balance} monthIncome={stats.money.monthIncome} />
-          </Card>
+          </Card>}
         </div>
 
         <div className="wk-head">
           <h2>Salah this month</h2>
         </div>
         <div className="charts">
-          <Card title="Salah overall" note="5 daily prayers" className="c-donut">
+          {!hidden["s-overall"] && <Card {...G("s-overall")} title="Salah overall" note="5 daily prayers" className="c-donut">
             <DonutStat overall={salahMain.overall} />
-          </Card>
-          <Card title="Salah each day" note="% of the 5 daily prayers prayed" className="c-daily">
+          </Card>}
+          {!hidden["s-daily"] && <Card {...G("s-daily")} title="Salah each day" note="% of the 5 daily prayers prayed" className="c-daily">
             <DailyProgressBars data={salahMain.days} />
-          </Card>
-          <Card title="Salah each week" note="% of the 5 daily prayers" className="c-weekly">
+          </Card>}
+          {!hidden["s-weekly"] && <Card {...G("s-weekly")} title="Salah each week" note="% of the 5 daily prayers" className="c-weekly">
             <WeeklyProgressBars data={salahMain.weeks} />
-          </Card>
-          <Card title="Prayer by prayer" note="% of the month each prayer was prayed" className="c-habits">
+          </Card>}
+          {!hidden["s-prayers"] && <Card {...G("s-prayers")} title="Prayer by prayer" note="% of the month each prayer was prayed" className="c-habits">
             <HabitPerformanceBars data={salahAll.habits} />
-          </Card>
+          </Card>}
         </div>
 
         <AllDays state={state} onEdit={(key) => goToDay(key, true)} />

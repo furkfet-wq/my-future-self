@@ -8,6 +8,7 @@ const STEPS = {
   setup: ["new", "confirm"],
   unlock: ["enter"],
   change: ["current", "new", "confirm"],
+  remove: ["current"],
 };
 const PROMPT = {
   new: "Choose a 10-digit PIN",
@@ -65,7 +66,7 @@ export default function Lock({ mode, onDone, onCancel }) {
           return;
         }
         sfx.done();
-        if (step === "enter") return onDone();
+        if (step === "enter" || mode === "remove") return onDone();
         setStep("new");
         setMsg("");
       } else if (step === "new") {

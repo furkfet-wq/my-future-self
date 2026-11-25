@@ -72,3 +72,9 @@ export function resetEverything() {
   }
   keys.forEach((k) => localStorage.removeItem(k));
 }
+
+// Turning the PIN lock off in Settings: forget the PIN hash and any wrong-try wait.
+export function clearPin() {
+  localStorage.removeItem(KEY);
+  localStorage.removeItem(TRIES);
+}

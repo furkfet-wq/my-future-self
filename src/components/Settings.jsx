@@ -3,7 +3,24 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
 const KEY = "mfs-settings-v1";
-export const DEFAULT_SETTINGS = { alarm: true, prayerTimes: true, salahTable: true, verse: true, quote: true };
+export const DEFAULT_SETTINGS = { alarm: true, prayerTimes: true, salahTable: true, verse: true, quote: true, hiddenGraphs: {} };
+
+// Every graph that can be hidden with its × button.
+export const GRAPHS = [
+  ["wk-dots", "This week: Habits done each day"],
+  ["wk-rise", "This week: Rising progress"],
+  ["wk-stats", "This week: Day stats"],
+  ["m-overall", "This month: Overall"],
+  ["m-daily", "This month: Daily progress"],
+  ["m-weekly", "This month: Weekly progress"],
+  ["m-habits", "This month: Habit performance"],
+  ["m-mood", "This month: Feel and productivity"],
+  ["m-money", "This month: Money"],
+  ["s-overall", "Salah: Salah overall"],
+  ["s-daily", "Salah: Salah each day"],
+  ["s-weekly", "Salah: Salah each week"],
+  ["s-prayers", "Salah: Prayer by prayer"],
+];
 
 export function loadSettings() {
   try {
@@ -47,7 +64,7 @@ function Switch({ label, hint, on, onChange }) {
   );
 }
 
-export function SettingsPanel({ settings, onChange, onClose, onTestAlarm, onChangePin }) {
+export function SettingsPanel({ settings, onChange, onClose, onTestAlarm, onChangePin, pinOn, onPin }) {
   const root = useRef(null);
   const set = (k) => (v) => onChange({ ...settings, [k]: v });
 
@@ -84,13 +101,25 @@ export function SettingsPanel({ settings, onChange, onClose, onTestAlarm, onChan
         <Switch label="Salah table" hint="The grid where you tick each prayer" on={settings.salahTable} onChange={set("salahTable")} />
         <Switch label="Quran verse" hint="Verse of the day next to the cube" on={settings.verse} onChange={set("verse")} />
         <Switch label="Motivation quote" hint="Quote next to the cube" on={settings.quote} onChange={set("quote")} />
-        <div className="st-test st-pin">
-          <div>
-            <b>PIN</b>
-            <span>Change the 10-digit PIN that unlocks the app</span>
+        <Switch label="PIN lock" hint="Ask for a 10-digit PIN when the app opens. Off by default." on={pinOn} onChange={onPin} />
+        {pinOn && (
+          <div className="st-test st-pin">
+            <div>
+              <b>Change PIN</b>
+              <span>Pick a new 10-digit PIN</span>
+            </div>
+            <button onClick={onChangePin}>Change PIN</button>
           </div>
-          <button onClick={onChangePin}>Change PIN</button>
-        </div>
+        )}
+        <h3 className="st-sub">Graphs</h3>
+        {GRAPHS.map(([id, label]) => (
+          <Switch
+            key={id}
+            label={label}
+            on={!settings.hiddenGraphs?.[id]}
+            onChange={(v) => onChange({ ...settings, hiddenGraphs: { ...settings.hiddenGraphs, [id]: !v } })}
+          />
+        ))}
         <div className="st-test">
           <div>
             <b>Test alarm</b>

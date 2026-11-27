@@ -10,6 +10,7 @@ import { join } from "node:path";
 import http from "node:http";
 import { readFileSync } from "node:fs";
 import { W, startWorker, stopWorker, googleToken } from "./harness.mjs";
+import { cleanDoc } from "../shared/doc.js";
 
 const extDir = join(homedir(), ".vscode", "extensions");
 const pwDir = process.env.PLAYWRIGHT_CORE || join(extDir, readdirSync(extDir).find((d) => d.startsWith("vscjava.migrate-java-to-azure")), "node_modules", "playwright-core");
@@ -53,8 +54,8 @@ async function signInFor(page, sub) {
   await page.click("#fake-google");
 }
 async function serverDoc(ctx) {
-  const cookie = (await ctx.cookies()).find((c) => c.name === "mfs_session");
-  const res = await fetch(W + "/api/data", { headers: { cookie: `mfs_session=${cookie.value}` } });
+  const cookie = (await ctx.cookies()).find((c) => c.name === "__Host-mfs_session");
+  const res = await fetch(W + "/api/data", { headers: { cookie: `__Host-mfs_session=${cookie.value}` } });
   return res.json();
 }
 const local = (page, k = "habit-tracker-v1") => page.evaluate((key) => JSON.parse(localStorage.getItem(key)), k);
@@ -121,7 +122,7 @@ test("a #move link from the old address imports the data", async () => {
   await page.getByText("Import data from the old address?").waitFor();
   await page.getByRole("button", { name: "Import it" }).click();
   await page.locator("main.app").waitFor({ timeout: 20000 });
-  assert.deepEqual((await serverDoc(ctx)).data, doc);
+  assert.deepEqual((await serverDoc(ctx)).data, cleanDoc(doc));
 
   // delete account: asks twice, then everything is gone
   await page.click(".acc-btn");
@@ -179,7 +180,7 @@ test("old address page carries the data to the new site", async () => {
     await signInFor(app, "b8");
     await app.getByRole("button", { name: "Import it" }).click();
     await app.locator("main.app").waitFor({ timeout: 20000 });
-    assert.deepEqual((await serverDoc(ctx)).data, { v: 1, state, settings: { quote: false } });
+    assert.deepEqual((await serverDoc(ctx)).data, cleanDoc({ v: 1, state, settings: { quote: false } }));
     await ctx.close();
   } finally {
     srv.close();

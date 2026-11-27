@@ -48,3 +48,14 @@ for (const [name, make] of Object.entries(bad)) {
     await assert.rejects(check(await make()), /bad token/);
   });
 }
+
+test("unknown kid refetches keys once", async () => {
+  let calls = 0;
+  const keysLater = async (force) => {
+    calls++;
+    return force ? [jwk] : [{ ...jwk, kid: "old" }];
+  };
+  const user = await verifyGoogleIdToken(await sign(good), "cid", { getKeys: keysLater });
+  assert.equal(user.sub, "123");
+  assert.equal(calls, 2);
+});

@@ -19,6 +19,12 @@
       "database_id": "430afde8-5641-4e76-b6dc-7972cd2f9a28"
     }
   ],
+  // Rate limits (per visitor IP, or per account for saves): over the limit -> 429.
+  "ratelimits": [
+    { "name": "RL_LOGIN", "namespace_id": "4101", "simple": { "limit": 10, "period": 60 } },
+    { "name": "RL_WRITE", "namespace_id": "4102", "simple": { "limit": 60, "period": 60 } },
+    { "name": "RL_API", "namespace_id": "4103", "simple": { "limit": 120, "period": 60 } }
+  ],
   // The Google OAuth Client ID is public (no client secret is used).
   "vars": { "GOOGLE_CLIENT_ID": "892050576996-skhemi4r09one5e22oqcceq2ouacm4bp.apps.googleusercontent.com" }
 }

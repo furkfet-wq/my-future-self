@@ -19,7 +19,8 @@ export async function verifyGoogleIdToken(token, clientId, { getKeys, now = Date
     const [h, b, s] = parts;
     const header = b64uJson(h);
     if (header.alg !== "RS256" || typeof header.kid !== "string") throw 0;
-    const jwk = (await getKeys()).find((k) => k.kid === header.kid);
+    // Google rotates its keys: an unknown key id gets one fresh download of the key set
+    const jwk = (await getKeys()).find((k) => k.kid === header.kid) || (await getKeys(true)).find((k) => k.kid === header.kid);
     if (!jwk) throw 0;
     const key = await crypto.subtle.importKey("jwk", { kty: jwk.kty, n: jwk.n, e: jwk.e }, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
     const ok = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64uBytes(s), enc.encode(`${h}.${b}`));
@@ -38,10 +39,13 @@ export async function verifyGoogleIdToken(token, clientId, { getKeys, now = Date
 
 // Google's public keys, kept in memory until their Cache-Control max-age runs out.
 let cached = { keys: null, until: 0 };
+let lastForced = 0;
 export function googleKeys(env) {
   const url = env.JWKS_URL || "https://www.googleapis.com/oauth2/v3/certs";
-  return async () => {
-    if (cached.keys && Date.now() < cached.until && cached.url === url) return cached.keys;
+  return async (force = false) => {
+    const fresh = cached.keys && Date.now() < cached.until && cached.url === url;
+    if (fresh && !(force && Date.now() - lastForced > 60000)) return cached.keys;
+    if (force) lastForced = Date.now();
     const res = await fetch(url);
     if (!res.ok) throw new Error("keys unavailable");
     const { keys } = await res.json();

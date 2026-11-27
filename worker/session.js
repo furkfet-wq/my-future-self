@@ -2,7 +2,7 @@
 import { json } from "./http.js";
 import { verifyGoogleIdToken, googleKeys } from "./google.js";
 
-const COOKIE = "mfs_session";
+const COOKIE = "__Host-mfs_session"; // __Host-: Secure, Path=/, no Domain, so no other site or subdomain can set it
 const DAY = 86400;
 const LIFE_S = 30 * DAY;
 const RENEW_BELOW_S = 15 * DAY;
@@ -15,7 +15,7 @@ const cookieHeader = (token, maxAge) => `${COOKIE}=${token}; HttpOnly; Secure; S
 export const clearCookie = () => cookieHeader("", 0);
 
 function readCookie(request) {
-  const m = /(?:^|;\s*)mfs_session=([0-9a-f]{64})(?:;|$)/.exec(request.headers.get("Cookie") || "");
+  const m = /(?:^|;\s*)__Host-mfs_session=([0-9a-f]{64})(?:;|$)/.exec(request.headers.get("Cookie") || "");
   return m ? m[1] : null;
 }
 
@@ -74,5 +74,11 @@ export async function login(request, env) {
 export async function logout(request, env) {
   const token = readCookie(request);
   if (token) await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256(token)).run();
+  return json({ ok: true }, 200, { "Set-Cookie": clearCookie() });
+}
+
+// "Sign out everywhere": ends every session of this account (lost or shared device).
+export async function logoutAll(request, env, user) {
+  await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id).run();
   return json({ ok: true }, 200, { "Set-Cookie": clearCookie() });
 }

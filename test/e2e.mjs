@@ -54,7 +54,7 @@ test("logout ends the session", async () => {
 
 // ---- Task 4: saved data ----
 let USER; // the account each test is signed in as
-const doc = (n) => ({ v: 1, state: { habits: [{ id: "h", name: `Habit ${n}` }], checks: {}, logs: {}, salah: {}, startBalance: n }, settings: {} });
+const doc = (n) => ({ v: 1, state: { habits: [{ id: "h", name: `Habit ${n}` }], checks: {}, logs: {}, salah: {}, startBalance: n, notes: null, alarms: [] }, settings: {} });
 
 test("new account has no data", async () => {
   const cookie = await signIn((USER = "d1"));
@@ -149,4 +149,38 @@ test("the server keeps only a cleaned copy", async () => {
   d.state.logs = { "2026-11-27": { feel: 4, junk: "x" }, "2000-01-01": null };
   assert.equal((await req("/api/data", { method: "PUT", cookie, body: { data: d, version: 0, user: USER } })).status, 200);
   assert.deepEqual((await (await req("/api/data", { cookie })).json()).data.state.logs, { "2026-11-27": { feel: 4 } });
+});
+
+// ---- security pass ----
+test("cookie uses the __Host- prefix", async () => {
+  const res = await req("/api/login", { method: "POST", body: { credential: await googleToken("hp") } });
+  const set = res.headers.get("set-cookie");
+  assert.ok(set.startsWith("__Host-mfs_session="), set);
+  assert.ok(!/Domain=/i.test(set));
+});
+
+test("sign out everywhere ends other sessions", async () => {
+  const one = await signIn("everywhere");
+  const two = await signIn("everywhere");
+  const res = await req("/api/logout-all", { method: "POST", cookie: one });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await (await req("/api/me", { cookie: two })).json(), { user: null });
+  assert.deepEqual(await (await req("/api/me", { cookie: one })).json(), { user: null });
+});
+
+test("login is rate limited", async () => {
+  const statuses = [];
+  for (let i = 0; i < 12; i++) statuses.push((await req("/api/login", { method: "POST", body: { credential: "x.y.z" }, client: "flood" })).status);
+  assert.ok(statuses.includes(429), statuses.join(","));
+  // someone else is not affected
+  assert.equal((await req("/api/login", { method: "POST", body: { credential: "x.y.z" }, client: "other-person" })).status, 401);
+});
+
+test("security headers are on pages and API", async () => {
+  for (const path of ["/", "/api/me"]) {
+    const h = (await req(path)).headers;
+    assert.match(h.get("strict-transport-security") || "", /max-age=31536000/, path);
+    assert.match(h.get("permissions-policy") || "", /camera=\(\)/, path);
+    assert.equal(h.get("x-frame-options"), "DENY", path);
+  }
 });

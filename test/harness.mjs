@@ -29,11 +29,11 @@ export async function googleToken(sub, extra = {}) {
 }
 
 // ---- helpers ----
-export const req = (path, { method = "GET", body, cookie, origin = method === "GET" ? undefined : W } = {}) =>
+export const req = (path, { method = "GET", body, cookie, client = Math.random().toString(36).slice(2), origin = method === "GET" ? undefined : W } = {}) =>
   fetch(W + path, {
     method,
     redirect: "manual",
-    headers: { ...(body !== undefined && { "content-type": "application/json" }), ...(cookie && { cookie }), ...(origin && { origin }) },
+    headers: { "x-test-client": client, ...(body !== undefined && { "content-type": "application/json" }), ...(cookie && { cookie }), ...(origin && { origin }) },
     body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
   });
 export const cookieOf = (res) => (res.headers.get("set-cookie") || "").split(";")[0];
@@ -55,7 +55,7 @@ export async function startWorker() {
   wrangler = spawn(
     process.execPath,
     ["node_modules/wrangler/bin/wrangler.js", "dev", "--local", "--port", "8787", "--ip", "127.0.0.1", "--show-interactive-dev-session=false",
-      "--var", `GOOGLE_CLIENT_ID:${CLIENT_ID}`, "--var", "JWKS_URL:http://127.0.0.1:8790/certs", "--var", "PRAYER_URL:http://127.0.0.1:9/"],
+      "--var", `GOOGLE_CLIENT_ID:${CLIENT_ID}`, "--var", "JWKS_URL:http://127.0.0.1:8790/certs", "--var", "PRAYER_URL:http://127.0.0.1:9/", "--var", "TEST_MODE:1"],
     { stdio: "ignore" }
   );
   for (let i = 0; i < 120; i++) {

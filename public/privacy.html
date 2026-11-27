@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050505" />
+    <title>Privacy · My Future Self</title>
+    <style>
+      body { margin: 0; background: #000; color: #fff; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+      main { max-width: 680px; margin: 0 auto; padding: 48px 22px 80px; }
+      h1 { font-size: clamp(30px, 6vw, 42px); line-height: 1.1; margin: 0 0 6px; letter-spacing: -0.02em; }
+      h2 { font-size: 20px; margin: 34px 0 8px; }
+      p, li { color: rgba(255, 255, 255, 0.82); }
+      .dim { color: rgba(255, 255, 255, 0.45); font-size: 14px; }
+      a { color: #fff; text-underline-offset: 3px; }
+      ul { padding-left: 20px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Privacy</h1>
+      <p class="dim">My Future Self · last updated 27 November 2026</p>
+
+      <h2>What is saved</h2>
+      <ul>
+        <li>From your Google account: your name, email address, profile picture and Google account ID. Nothing else, and never your password.</li>
+        <li>What you enter in the app: your habits and ticks, salah ticks, daily actions (feel, productivity, energy, money made and spent, time distracted), your money total and your settings.</li>
+      </ul>
+
+      <h2>Where it is saved</h2>
+      <p>
+        In the app's database on Cloudflare (Cloudflare Workers and D1), linked to your Google account. A copy is also kept in your own
+        browser so the app opens fast and keeps working when you are offline. Only you, signed in with your Google account, can see your data.
+      </p>
+
+      <h2>Why</h2>
+      <p>Only to run the app for you: to sign you in and to show you your own data on every device. Your data is not sold, shared or used for adverts.</p>
+
+      <h2>Cookies</h2>
+      <p>One cookie, <code>mfs_session</code>, keeps you signed in for up to 30 days. It is needed for the app to work. There are no tracking or advert cookies.</p>
+
+      <h2>Other services the app uses</h2>
+      <ul>
+        <li>Google sign-in (accounts.google.com), when you sign in.</li>
+        <li>Google Fonts, for the app's fonts.</li>
+        <li>api.alquran.cloud, for the daily Quran verse.</li>
+        <li>api.quotable.kurokeita.dev, for motivation quotes.</li>
+        <li>namazvakitleri.com.tr, for Coventry prayer times (fetched by the app's server, not by your browser).</li>
+      </ul>
+      <p>None of them receive your entries.</p>
+
+      <h2>Deleting your data</h2>
+      <p>
+        Open the app, click your account picture next to the Settings gear, and choose <b>Delete my account</b>. Your account and everything
+        you saved are deleted from the database straight away and cannot be brought back. Signing out also removes the copy in that browser.
+      </p>
+
+      <h2>Questions</h2>
+      <p>Ask through the app's page on GitHub: <a href="https://github.com/furkfet-wq/my-future-self/issues">github.com/furkfet-wq/my-future-self</a>.</p>
+
+      <p><a href="/">Back to the app</a></p>
+    </main>
+  </body>
+</html>

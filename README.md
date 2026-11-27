@@ -2,21 +2,29 @@
 
 A black and white habit and salah tracker with a carbon fibre Rubik's cube, live prayer times for Coventry, a daily Quran verse and motivation quotes.
 
-## Run it
+## Use it
 
-You need [Node.js](https://nodejs.org) installed.
+Open **https://my-future-self.flamesmp.workers.dev** and sign in with Google. Your data is saved to your account, so you see the same habits on every device where you sign in with the same Google account. On Windows, `Open My Future Self.bat` just opens that address.
 
-- **Windows:** double-click `Open My Future Self.bat`. The first run installs what the app needs (a minute or two), then the app opens in your browser. Keep the black window open while you use it.
-- **Any system:** open a terminal in this folder and run:
+## Develop it
 
-  ```
-  npm install
-  npm run dev
-  ```
+You need [Node.js](https://nodejs.org). In this folder:
 
-  then open http://localhost:5173
+```
+npm install
+npm run build
+npx wrangler dev          # the Worker on http://127.0.0.1:8787 (sign-in, saved data, prayer times)
+npm run dev               # the app on http://localhost:5173, /api is passed to the Worker
+```
 
-Run it with `npm run dev`: the prayer times are read from namazvakitleri.com.tr through the app's local dev server.
+For local sign-in, create `.dev.vars` with `EXTRA_ORIGINS=http://localhost:5173`, and apply the database tables once:
+`npx wrangler d1 execute my-future-self --local --file worker/schema.sql`.
+
+Tests: `npm test` (unit), `npm run test:e2e` (Worker API against a local database), `npm run test:browser` (sign-in and saving in Edge). Run `npm run build` first for the last two.
+
+Deploy: `npm run deploy` (saves a fresh backup of the prayer times, builds, and uploads to Cloudflare).
+
+How it fits together: one Cloudflare Worker (`worker/`) serves the built app from `dist/` and answers `/api/*` (Google sign-in, saved data, account delete) and `/prayer-times.json`. Data is stored in the Cloudflare D1 database `my-future-self` (`worker/schema.sql`), one document per Google account.
 
 ## What it does
 
@@ -29,10 +37,8 @@ Run it with `npm run dev`: the prayer times are read from namazvakitleri.com.tr 
 
 ## PIN lock
 
-The first time you open the app you choose your own 10-digit PIN; after that the app asks for it every time it opens. The PIN is never stored: only a salted PBKDF2-SHA-256 hash of it, in your own browser. After 5 wrong tries the app makes you wait (30 s, then longer). If you forget it, "Forgot PIN?" deletes the app's data on that device so you can start again; it cannot be recovered. You can change it in Settings.
-
-The PIN stops other people using your computer from opening the app. It does not encrypt the saved data, so someone with technical access to your browser's storage could still read it.
+Optional and off by default. Turn it on in Settings to choose a 10-digit PIN; after that the app asks for it every time it opens on that device. The PIN is never stored: only a salted PBKDF2-SHA-256 hash of it, in your own browser. After 5 wrong tries the app makes you wait (30 s, then longer). "Forgot PIN?" removes the app's data from that browser; your saved data comes back from your account when you sign in again. You can change it or turn it off in Settings.
 
 ## Privacy
 
-Everything you enter is saved only in your own browser (localStorage) on your own device. The app has no accounts, no server and no database, and it never sends your data anywhere. It only fetches public content: prayer times (namazvakitleri.com.tr), Quran verses (api.alquran.cloud), quotes (api.quotable.kurokeita.dev) and fonts (Google Fonts). Clearing your browser data deletes your entries.
+Sign-in is with Google: the app keeps your name, email, profile picture and Google account ID. What you enter is saved in the app's Cloudflare D1 database, linked to your Google account, with a copy in your browser. Only you can see your data; it is not sold or shared. One cookie keeps you signed in. To delete everything, use **Delete my account** in the account menu next to the Settings gear. The full text is in `public/privacy.html` (shown in the app at `/privacy.html`).

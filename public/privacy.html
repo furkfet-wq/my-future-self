@@ -24,7 +24,7 @@
       <h2>What is saved</h2>
       <ul>
         <li>From your Google account: your name, email address, profile picture and Google account ID. Nothing else, and never your password.</li>
-        <li>What you enter in the app: your habits and ticks, salah ticks, daily actions (feel, productivity, energy, money made and spent, time distracted), your money total and your settings.</li>
+        <li>What you enter in the app: your habits and ticks, salah ticks, daily actions (feel, productivity, energy, money made and spent, time distracted), your money total, your notepad, your alarms and your settings (including the place you chose for prayer times).</li>
       </ul>
 
       <h2>Where it is saved</h2>
@@ -33,11 +33,19 @@
         browser so the app opens fast and keeps working when you are offline. Only you, signed in with your Google account, can see your data.
       </p>
 
+      <h2>How it is protected</h2>
+      <p>
+        You sign in with Google; the app never sees your password. Every request is checked against your sign-in, so other
+        people cannot read or change your data. Connections are encrypted (HTTPS), the database is encrypted by Cloudflare,
+        and the app limits how fast anyone can send requests. Your data is not end-to-end encrypted: the app's owner, who
+        runs the Cloudflare account, could technically access the database. Nobody else can.
+      </p>
+
       <h2>Why</h2>
       <p>Only to run the app for you: to sign you in and to show you your own data on every device. Your data is not sold, shared or used for adverts.</p>
 
       <h2>Cookies</h2>
-      <p>One cookie, <code>mfs_session</code>, keeps you signed in for up to 30 days. It is needed for the app to work. There are no tracking or advert cookies.</p>
+      <p>One cookie, <code>__Host-mfs_session</code>, keeps you signed in for up to 30 days. It is needed for the app to work. There are no tracking or advert cookies.</p>
 
       <h2>Other services the app uses</h2>
       <ul>
@@ -45,7 +53,8 @@
         <li>Google Fonts, for the app's fonts.</li>
         <li>api.alquran.cloud, for the daily Quran verse.</li>
         <li>api.quotable.kurokeita.dev, for motivation quotes.</li>
-        <li>namazvakitleri.com.tr, for Coventry prayer times (fetched by the app's server, not by your browser).</li>
+        <li>namazvakitleri.com.tr, for prayer times (fetched by the app's server, not by your browser).</li>
+        <li>Open-Meteo (geocoding-api.open-meteo.com), when you search for a place for your prayer times. It receives only the place name you type.</li>
       </ul>
       <p>None of them receive your entries.</p>
 

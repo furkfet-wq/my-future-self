@@ -184,3 +184,14 @@ test("security headers are on pages and API", async () => {
     assert.equal(h.get("x-frame-options"), "DENY", path);
   }
 });
+
+// ---- prayer place ----
+test("nearest prayer city for coordinates", async () => {
+  const res = await req("/api/prayer-city?lat=41.01&lon=28.98");
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).id, 5041);
+});
+
+test("bad coordinates are 400", async () => {
+  for (const q of ["lat=95&lon=0", "lat=abc&lon=1", "lat=1", ""]) assert.equal((await req(`/api/prayer-city?${q}`)).status, 400, q);
+});

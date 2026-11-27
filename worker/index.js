@@ -3,7 +3,7 @@
 import { json, limit, clientKey } from "./http.js";
 import { requireSameOrigin, getUser, publicUser, login, logout, logoutAll } from "./session.js";
 import { getData, putData, deleteAccount } from "./data.js";
-import { prayerTimes } from "./prayer.js";
+import { prayerTimes, prayerCity } from "./prayer.js";
 
 async function api(request, env, path) {
   const refused = requireSameOrigin(request, env);
@@ -13,6 +13,7 @@ async function api(request, env, path) {
   const tooMany = await limit(env.RL_API, `api:${ip}`);
   if (tooMany) return tooMany;
 
+  if (path === "/api/prayer-city" && m === "GET") return prayerCity(request);
   if (path === "/api/login" && m === "POST") return (await limit(env.RL_LOGIN, `login:${ip}`)) || login(request, env);
   if (path === "/api/logout" && m === "POST") return logout(request, env);
 

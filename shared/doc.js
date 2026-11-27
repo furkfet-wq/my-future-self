@@ -15,8 +15,79 @@ export function validateDoc(doc) {
 // ---- deep clean: every document from outside (old-address link, server, another device) goes through this ----
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const LOG_FIELDS = ["feel", "productive", "energy", "money", "spent", "distracted"];
-const SETTING_FLAGS = ["alarm", "prayerTimes", "salahTable", "verse", "quote"];
+const SETTING_FLAGS = ["alarm", "prayerTimes", "salahTable", "verse", "quote", "muslim"];
 const MAX_HABITS = 200;
+
+// Notepad: the only fonts, sizes and colours the toolbar offers. Anything else is dropped.
+export const NOTE_FONTS = ["Archivo", "Georgia, serif", "ui-monospace, monospace", '"Arial Rounded MT Bold", "Nunito", sans-serif', '"Segoe Print", "Bradley Hand", cursive'];
+export const NOTE_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px"];
+export const NOTE_COLOURS = ["#ffffff", "#ff5c5c", "#ffa24c", "#ffd84c", "#6ee07a", "#4cc3ff", "#7a8cff", "#c77dff", "#ff7ac8"];
+export const NOTE_HIGHLIGHTS = ["#ffd84c", "#6ee07a", "#4cc3ff", "#ff7ac8", "#ffa24c", "#ffffff"];
+export const NOTE_MAX_BYTES = 300_000;
+export const MAX_ALARMS = 30;
+const TEXT_STYLE = { color: NOTE_COLOURS, fontSize: NOTE_SIZES, fontFamily: NOTE_FONTS };
+
+function cleanMarks(marks) {
+  const out = [];
+  const seen = new Set();
+  for (const m of Array.isArray(marks) ? marks : []) {
+    if (!isObj(m) || seen.has(m.type)) continue;
+    let mark = null;
+    if (m.type === "bold" || m.type === "italic" || m.type === "underline") mark = { type: m.type };
+    else if (m.type === "highlight" && NOTE_HIGHLIGHTS.includes(m.attrs?.color)) mark = { type: "highlight", attrs: { color: m.attrs.color } };
+    else if (m.type === "textStyle" && isObj(m.attrs)) {
+      const attrs = {};
+      for (const [k, allowed] of Object.entries(TEXT_STYLE)) if (allowed.includes(m.attrs[k])) attrs[k] = m.attrs[k];
+      if (Object.keys(attrs).length) mark = { type: "textStyle", attrs };
+    }
+    if (mark) {
+      seen.add(m.type);
+      out.push(mark);
+    }
+  }
+  return out;
+}
+
+function cleanInline(node) {
+  if (!isObj(node)) return null;
+  if (node.type === "hardBreak") return { type: "hardBreak" };
+  if (node.type !== "text" || typeof node.text !== "string" || !node.text) return null;
+  const marks = cleanMarks(node.marks);
+  return marks.length ? { type: "text", text: node.text, marks } : { type: "text", text: node.text };
+}
+
+export function cleanNotes(notes) {
+  if (!isObj(notes) || notes.type !== "doc" || !Array.isArray(notes.content)) return null;
+  const content = [];
+  for (const block of notes.content) {
+    if (!isObj(block) || block.type !== "paragraph") continue;
+    const inner = (Array.isArray(block.content) ? block.content : []).map(cleanInline).filter(Boolean);
+    content.push(inner.length ? { type: "paragraph", content: inner } : { type: "paragraph" });
+  }
+  const out = { type: "doc", content };
+  return JSON.stringify(out).length > NOTE_MAX_BYTES ? null : out;
+}
+
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+export function cleanAlarms(list) {
+  const out = [];
+  for (const a of Array.isArray(list) ? list : []) {
+    if (out.length >= MAX_ALARMS) break;
+    if (!isObj(a) || typeof a.id !== "string" || !a.id || a.id.length > 24 || !TIME.test(a.time)) continue;
+    const days = Array.isArray(a.days) ? [...new Set(a.days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((x, y) => x - y) : [];
+    out.push({ id: a.id, time: a.time, label: typeof a.label === "string" ? a.label.slice(0, 40) : "", days, on: a.on === true });
+  }
+  return out;
+}
+
+function cleanPlace(p) {
+  if (!isObj(p) || !Number.isInteger(p.cityId) || p.cityId <= 0) return undefined;
+  const lat = p.lat;
+  const lon = p.lon;
+  if (typeof lat !== "number" || typeof lon !== "number" || !(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) return undefined;
+  const str = (x) => (typeof x === "string" ? x.slice(0, 80) : "");
+  return { name: str(p.name), region: str(p.region), country: str(p.country), lat, lon, cityId: p.cityId };
+}
 
 function cleanTicks(days) {
   const out = {};
@@ -54,6 +125,8 @@ export function cleanDoc(doc) {
     settings.hiddenGraphs = {};
     for (const [g, v] of Object.entries(raw.hiddenGraphs)) if (v === true && g.length <= 32) settings.hiddenGraphs[g] = true;
   }
+  const place = cleanPlace(raw.place);
+  if (place) settings.place = place;
   return {
     v: DOC_VERSION,
     state: {
@@ -62,6 +135,8 @@ export function cleanDoc(doc) {
       logs: cleanLogs(s.logs),
       salah: cleanTicks(s.salah),
       startBalance: typeof s.startBalance === "number" && Number.isFinite(s.startBalance) ? s.startBalance : 0,
+      notes: cleanNotes(s.notes),
+      alarms: cleanAlarms(s.alarms),
     },
     settings,
   };

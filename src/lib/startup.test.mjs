@@ -45,7 +45,7 @@ beforeEach(() => mem.clear());
 test("write, read and clear the local copy", () => {
   writeLocalDoc(remote, "A");
   assert.equal(localStorage.getItem(OWNER_KEY), "A");
-  assert.deepEqual(readLocalDoc(), { v: 1, state: full, settings: {} });
+  assert.deepEqual(readLocalDoc(), { v: 1, state: { ...full, notes: null, alarms: [] }, settings: {} });
   localStorage.setItem(DIRTY_KEY, "1");
   clearLocal();
   for (const k of [STORAGE_KEY, SETTINGS_KEY, OWNER_KEY, DIRTY_KEY]) assert.equal(localStorage.getItem(k), null);

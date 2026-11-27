@@ -65,3 +65,69 @@ test("sameDoc ignores key order", () => {
   b.state.startBalance = 1;
   assert.equal(sameDoc(a, b), false);
 });
+
+// ---- notes, alarms, Muslim mode, place ----
+const withState = (extra, settings = {}) => cleanDoc({ ...good(), state: { ...good().state, ...extra }, settings });
+const para = (...content) => ({ type: "paragraph", content });
+const txt = (text, marks) => (marks ? { type: "text", text, marks } : { type: "text", text });
+
+test("notes keep only allowed nodes and marks", () => {
+  const notes = {
+    type: "doc",
+    content: [
+      para(
+        txt("ok", [{ type: "bold" }, { type: "textStyle", attrs: { color: "#ff5c5c", fontSize: "32px", fontFamily: "Georgia, serif" } }]),
+        txt("bad", [{ type: "link", attrs: { href: "javascript:alert(1)" } }, { type: "textStyle", attrs: { color: "red; background:url(x)", fontSize: "999px", fontFamily: "Comic" } }]),
+        { type: "hardBreak" },
+        txt("hl", [{ type: "highlight", attrs: { color: "#ffd84c" } }, { type: "highlight", attrs: { color: "#123456" } }])
+      ),
+      { type: "script", content: [txt("x")] },
+      { type: "heading", attrs: { level: 1 }, content: [txt("h")] },
+      para(txt("s", [{ type: "italic" }, { type: "underline" }]), { type: "text", text: 5 }),
+    ],
+  };
+  const c = withState({ notes }).state.notes;
+  assert.deepEqual(c, {
+    type: "doc",
+    content: [
+      para(
+        txt("ok", [{ type: "bold" }, { type: "textStyle", attrs: { color: "#ff5c5c", fontSize: "32px", fontFamily: "Georgia, serif" } }]),
+        txt("bad"),
+        { type: "hardBreak" },
+        txt("hl", [{ type: "highlight", attrs: { color: "#ffd84c" } }])
+      ),
+      para(txt("s", [{ type: "italic" }, { type: "underline" }])),
+    ],
+  });
+});
+
+test("notes over 300 KB are dropped to null; missing notes are null", () => {
+  const big = { type: "doc", content: [para(txt("x".repeat(300_001)))] };
+  assert.equal(withState({ notes: big }).state.notes, null);
+  assert.equal(cleanDoc(good()).state.notes, null);
+  assert.equal(withState({ notes: { type: "nope" } }).state.notes, null);
+});
+
+test("alarms are cleaned", () => {
+  const ok = { id: "a1", time: "07:05", label: "Gym", days: [5, 1, 1, 9], on: true };
+  const list = [ok, { id: "b", time: "25:00", label: "", days: [], on: true }, { id: "c", time: "06:00", label: "x".repeat(60), days: "mon", on: "yes" }];
+  for (let i = 0; i < 40; i++) list.push({ id: `n${i}`, time: "09:00", label: "", days: [], on: false });
+  const c = withState({ alarms: list }).state.alarms;
+  assert.deepEqual(c[0], { id: "a1", time: "07:05", label: "Gym", days: [1, 5], on: true });
+  assert.deepEqual(c[1], { id: "c", time: "06:00", label: "x".repeat(40), days: [], on: false });
+  assert.equal(c.length, 30);
+  assert.deepEqual(cleanDoc(good()).state.alarms, []);
+});
+
+test("place is kept only when it is valid", () => {
+  const place = { name: "Istanbul", region: "Istanbul", country: "Türkiye", lat: 41.01, lon: 28.98, cityId: 5041 };
+  assert.deepEqual(cleanDoc({ ...good(), settings: { place } }).settings.place, place);
+  assert.equal(cleanDoc({ ...good(), settings: { place: { ...place, lat: 200 } } }).settings.place, undefined);
+  assert.equal(cleanDoc({ ...good(), settings: { place: { ...place, cityId: "5041" } } }).settings.place, undefined);
+  assert.equal(cleanDoc({ ...good(), settings: { place: { ...place, name: "y".repeat(200) } } }).settings.place.name.length, 80);
+});
+
+test("muslim must be a boolean", () => {
+  assert.equal(cleanDoc({ ...good(), settings: { muslim: false } }).settings.muslim, false);
+  assert.equal(cleanDoc({ ...good(), settings: { muslim: "no" } }).settings.muslim, undefined);
+});

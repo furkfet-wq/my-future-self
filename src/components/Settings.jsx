@@ -3,7 +3,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
 import { SETTINGS_KEY as KEY } from "../lib/startup.js";
-export const DEFAULT_SETTINGS = { alarm: true, prayerTimes: true, salahTable: true, verse: true, quote: true, hiddenGraphs: {} };
+export const DEFAULT_SETTINGS = { muslim: true, alarm: true, prayerTimes: true, salahTable: true, verse: true, quote: true, hiddenGraphs: {} };
 
 // Every graph that can be hidden with its × button.
 export const GRAPHS = [

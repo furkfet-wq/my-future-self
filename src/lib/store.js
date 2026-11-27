@@ -16,6 +16,8 @@ function seed() {
     logs: {},
     salah: {},
     startBalance: 0,
+    notes: null,
+    alarms: [],
   };
 }
 
@@ -38,6 +40,8 @@ function clean(s) {
     logs: s.logs || {},
     salah: s.salah || {},
     startBalance: Number.isFinite(s.startBalance) ? s.startBalance : 0,
+    notes: s.notes && typeof s.notes === "object" ? s.notes : null,
+    alarms: Array.isArray(s.alarms) ? s.alarms : [],
   };
 }
 
@@ -98,6 +102,10 @@ function reducer(state, action) {
       else delete salah[key];
       return { ...state, salah };
     }
+    case "setNotes":
+      return { ...state, notes: action.notes };
+    case "setAlarms":
+      return { ...state, alarms: action.alarms };
     case "replace":
       return clean(action.state);
     case "setStartBalance":
@@ -128,6 +136,8 @@ export function useStore() {
     setStartBalance: (value) => dispatch({ type: "setStartBalance", value }),
     toggleSalah: (key, id) => dispatch({ type: "toggleSalah", key, id }),
     replace: (state) => dispatch({ type: "replace", state }),
+    setNotes: (notes) => dispatch({ type: "setNotes", notes }),
+    setAlarms: (alarms) => dispatch({ type: "setAlarms", alarms }),
   };
   return [state, actions];
 }

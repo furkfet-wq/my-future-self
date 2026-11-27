@@ -1,6 +1,5 @@
 import { useEffect, useReducer } from "react";
-
-const STORAGE_KEY = "habit-tracker-v1";
+import { STORAGE_KEY } from "./startup.js";
 
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 

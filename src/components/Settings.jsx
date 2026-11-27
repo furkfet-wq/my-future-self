@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
-const KEY = "mfs-settings-v1";
+import { SETTINGS_KEY as KEY } from "../lib/startup.js";
 export const DEFAULT_SETTINGS = { alarm: true, prayerTimes: true, salahTable: true, verse: true, quote: true, hiddenGraphs: {} };
 
 // Every graph that can be hidden with its × button.

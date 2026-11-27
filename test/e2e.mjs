@@ -128,3 +128,67 @@ test("logout ends the session", async () => {
   assert.ok(out.headers.get("set-cookie").includes("Max-Age=0"));
   assert.deepEqual(await (await req("/api/me", { cookie })).json(), { user: null });
 });
+
+// ---- Task 4: saved data ----
+const doc = (n) => ({ v: 1, state: { habits: [{ id: "h", name: `Habit ${n}` }], checks: {}, logs: {}, salah: {}, startBalance: n }, settings: {} });
+
+test("new account has no data", async () => {
+  const cookie = await signIn("d1");
+  assert.deepEqual(await (await req("/api/data", { cookie })).json(), { data: null, version: 0 });
+});
+
+test("put then get round-trips", async () => {
+  const cookie = await signIn("d2");
+  const put = await req("/api/data", { method: "PUT", cookie, body: { data: doc(1), version: 0 } });
+  assert.equal(put.status, 200);
+  assert.deepEqual(await put.json(), { version: 1 });
+  assert.deepEqual(await (await req("/api/data", { cookie })).json(), { data: doc(1), version: 1 });
+  assert.equal((await req("/api/data", { method: "PUT", cookie, body: { data: doc(2), version: 1 } })).status, 200);
+  assert.deepEqual(await (await req("/api/data", { cookie })).json(), { data: doc(2), version: 2 });
+});
+
+test("stale version gets 409", async () => {
+  const cookie = await signIn("d3");
+  assert.equal((await req("/api/data", { method: "PUT", cookie, body: { data: doc(1), version: 0 } })).status, 200);
+  const second = await req("/api/data", { method: "PUT", cookie, body: { data: doc(2), version: 0 } });
+  assert.equal(second.status, 409);
+  assert.deepEqual(await second.json(), { data: doc(1), version: 1 });
+});
+
+test("too big is 413", async () => {
+  const cookie = await signIn("d4");
+  const big = doc(1);
+  big.settings.pad = "x".repeat(1_000_001);
+  assert.equal((await req("/api/data", { method: "PUT", cookie, body: { data: big, version: 0 } })).status, 413);
+});
+
+test("invalid doc is 400", async () => {
+  const cookie = await signIn("d5");
+  assert.equal((await req("/api/data", { method: "PUT", cookie, body: { data: { v: 1 }, version: 0 } })).status, 400);
+  assert.equal((await req("/api/data", { method: "PUT", cookie, body: { data: doc(1), version: "0" } })).status, 400);
+  assert.equal((await req("/api/data", { method: "PUT", cookie, body: "{" })).status, 400);
+});
+
+test("data needs sign-in", async () => {
+  assert.equal((await req("/api/data")).status, 401);
+  assert.equal((await req("/api/data", { method: "PUT", body: { data: doc(1), version: 0 } })).status, 401);
+  assert.equal((await req("/api/account", { method: "DELETE" })).status, 401);
+});
+
+test("one account cannot read another's data", async () => {
+  const a = await signIn("pa");
+  const b = await signIn("pb");
+  await req("/api/data", { method: "PUT", cookie: a, body: { data: doc(7), version: 0 } });
+  assert.deepEqual(await (await req("/api/data", { cookie: b })).json(), { data: null, version: 0 });
+});
+
+test("delete account removes everything", async () => {
+  const cookie = await signIn("gone");
+  await req("/api/data", { method: "PUT", cookie, body: { data: doc(3), version: 0 } });
+  const del = await req("/api/account", { method: "DELETE", cookie });
+  assert.equal(del.status, 200);
+  assert.ok(del.headers.get("set-cookie").includes("Max-Age=0"));
+  assert.deepEqual(await (await req("/api/me", { cookie })).json(), { user: null });
+  const again = await signIn("gone");
+  assert.deepEqual(await (await req("/api/data", { cookie: again })).json(), { data: null, version: 0 });
+});

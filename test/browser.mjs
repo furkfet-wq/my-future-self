@@ -7,6 +7,8 @@ import { createRequire } from "node:module";
 import { readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import http from "node:http";
+import { readFileSync } from "node:fs";
 import { W, startWorker, stopWorker, googleToken } from "./harness.mjs";
 
 const extDir = join(homedir(), ".vscode", "extensions");
@@ -137,4 +139,38 @@ test("a stale device gets the newer copy instead of overwriting it", async () =>
   assert.equal(checksCount(await local(pb)), 1);
   await a.close();
   await b.close();
+});
+
+test("old address page carries the data to the new site", async () => {
+  // serve moved/ like GitHub Pages does, at /my-future-self/
+  const srv = http.createServer((q, r) => {
+    const f = q.url.endsWith("move.js") ? "moved/move.js" : "moved/index.html";
+    r.setHeader("content-type", f.endsWith(".js") ? "text/javascript" : "text/html");
+    r.end(readFileSync(f));
+  });
+  await new Promise((ok) => srv.listen(8791, "127.0.0.1", ok));
+  try {
+    const old = await browser.newContext();
+    const page = await old.newPage();
+    await page.route("https://my-future-self.flamesmp.workers.dev/**", (r) => r.fulfill({ contentType: "text/html", body: "new site" }));
+    await page.goto("http://127.0.0.1:8791/my-future-self/");
+    const state = { habits: [{ id: "o", name: "Habit from old site £" }], checks: { "2026-11-22": { o: true } }, logs: {}, salah: {}, startBalance: 236 };
+    await page.evaluate((s) => {
+      localStorage.setItem("habit-tracker-v1", JSON.stringify(s));
+      localStorage.setItem("mfs-settings-v1", JSON.stringify({ quote: false }));
+    }, state);
+    await page.reload();
+    await page.click("#move");
+    await page.waitForURL(/^https:\/\/my-future-self\.flamesmp\.workers\.dev\/#move=/);
+    const hash = new URL(page.url()).hash;
+    await old.close();
+
+    const ctx = await browser.newContext();
+    const app = await open(ctx, "/" + hash);
+    await signInAs(app, "b8");
+    assert.deepEqual((await serverDoc(ctx)).data, { v: 1, state, settings: { quote: false } });
+    await ctx.close();
+  } finally {
+    srv.close();
+  }
 });

@@ -319,7 +319,10 @@ export default function RubikHero() {
 
     // ---- drag to turn the whole cube (with momentum) ----
     const canvas = renderer.domElement;
-    const drag = { on: false, x: 0, y: 0, vx: 0, vy: 0 };
+    // vx / vy: turning speed in radians per millisecond, measured while dragging
+    const drag = { on: false, x: 0, y: 0, vx: 0, vy: 0, lastMove: 0 };
+    const GLIDE_S = 0.85; // after letting go the cube keeps turning and slows down smoothly (bigger = longer glide)
+    const MAX_V = 0.03;
     const AX = new THREE.Vector3(1, 0, 0);
     const AY = new THREE.Vector3(0, 1, 0);
     const rotateBy = (dx, dy) => {
@@ -383,6 +386,7 @@ export default function RubikHero() {
       drag.x = e.clientX;
       drag.y = e.clientY;
       drag.vx = drag.vy = 0;
+      drag.lastMove = performance.now();
       canvas.setPointerCapture(e.pointerId);
       el.classList.add("grabbing", "used");
     };
@@ -392,15 +396,24 @@ export default function RubikHero() {
       const dy = (e.pointerType === "touch" ? 0 : e.clientY - drag.y) * 0.009;
       drag.x = e.clientX;
       drag.y = e.clientY;
-      drag.vx = dx;
-      drag.vy = dy;
+      const t = performance.now();
+      const ms = Math.max(8, t - drag.lastMove);
+      drag.lastMove = t;
+      // smoothed speed, so one jumpy mouse event does not decide the glide
+      const clamp = (v) => Math.max(-MAX_V, Math.min(MAX_V, v));
+      drag.vx = clamp(drag.vx * 0.35 + (dx / ms) * 0.65);
+      drag.vy = clamp(drag.vy * 0.35 + (dy / ms) * 0.65);
       rotateBy(dx, dy);
       if (reduce) renderer.render(scene, camera);
     };
     const onUp = (e) => {
       // a quick press without moving is a click (poke), not a drag
       if (drag.on && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6 && performance.now() - drag.t0 < 450) onPoke();
-      if (drag.on) drag.released = performance.now();
+      if (drag.on) {
+        drag.released = performance.now();
+        // the mouse stopped before letting go: no glide
+        if (drag.released - drag.lastMove > 90) drag.vx = drag.vy = 0;
+      }
       drag.on = false;
       el.classList.remove("grabbing");
       if (canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
@@ -430,10 +443,17 @@ export default function RubikHero() {
           shell.position.x = 0;
         }
       }
-      if (!drag.on && (Math.abs(drag.vx) > 0.0002 || Math.abs(drag.vy) > 0.0002)) {
-        rotateBy(drag.vx, drag.vy);
-        drag.vx *= 0.94;
-        drag.vy *= 0.94;
+      if (!drag.on && (drag.vx || drag.vy)) {
+        // glide: keep turning, slowing down smoothly (same feel at any frame rate)
+        const ms = dt * 1000;
+        rotateBy(drag.vx * ms, drag.vy * ms);
+        const k = Math.exp(-dt / GLIDE_S);
+        drag.vx *= k;
+        drag.vy *= k;
+        if (Math.hypot(drag.vx, drag.vy) < 0.00002) {
+          drag.vx = drag.vy = 0;
+          drag.released = now; // turn back home 5 s after the glide ends
+        }
       } else if (!drag.on && drag.released && now - drag.released > 5000) {
         // slowly turn back to the normal position (about 3 seconds)
         if (cube.quaternion.angleTo(HOME) > 0.001) cube.quaternion.slerp(HOME, 1 - Math.exp(-dt * 1.4));

@@ -90,3 +90,41 @@ test("unknown api path is 404 json", async () => {
   assert.deepEqual(await res.json(), { error: "not found" });
   assert.equal(res.headers.get("x-content-type-options"), "nosniff");
 });
+
+// ---- Task 3: sign-in sessions ----
+test("login sets an HttpOnly session cookie", async () => {
+  const res = await req("/api/login", { method: "POST", body: { credential: await googleToken("u1") } });
+  assert.equal(res.status, 200);
+  const set = res.headers.get("set-cookie");
+  for (const part of ["mfs_session=", "HttpOnly", "Secure", "SameSite=Lax", "Path=/", "Max-Age=2592000"]) assert.ok(set.includes(part), `cookie has ${part}`);
+  const body = await res.json();
+  assert.equal(body.user.id, "u1");
+  assert.equal(body.user.email, "u1@example.com");
+  const me = await (await req("/api/me", { cookie: cookieOf(res) })).json();
+  assert.equal(me.user.id, "u1");
+});
+
+test("me without cookie is null", async () => {
+  assert.deepEqual(await (await req("/api/me")).json(), { user: null });
+  assert.deepEqual(await (await req("/api/me", { cookie: "mfs_session=deadbeef" })).json(), { user: null });
+});
+
+test("bad credential is 401", async () => {
+  assert.equal((await req("/api/login", { method: "POST", body: { credential: "x.y.z" } })).status, 401);
+  assert.equal((await req("/api/login", { method: "POST", body: { credential: await googleToken("u1", { aud: "other" }) } })).status, 401);
+  assert.equal((await req("/api/login", { method: "POST", body: "not json" })).status, 400);
+});
+
+test("foreign origin is refused", async () => {
+  const credential = await googleToken("u1");
+  assert.equal((await req("/api/login", { method: "POST", body: { credential }, origin: "https://evil.example" })).status, 403);
+  assert.equal((await req("/api/login", { method: "POST", body: { credential }, origin: "" })).status, 403);
+});
+
+test("logout ends the session", async () => {
+  const cookie = await signIn("u2");
+  const out = await req("/api/logout", { method: "POST", cookie });
+  assert.equal(out.status, 200);
+  assert.ok(out.headers.get("set-cookie").includes("Max-Age=0"));
+  assert.deepEqual(await (await req("/api/me", { cookie })).json(), { user: null });
+});

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 /* Round account button next to the Settings gear: Google picture, menu with Sign out and Delete my account. */
-export default function Account({ user, onSignOut, onDeleteAccount }) {
+export default function Account({ user, onSignOut, onSignOutEverywhere, onDeleteAccount }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0); // 0 menu, 1 first "are you sure", 2 last warning
   const [busy, setBusy] = useState(false);
@@ -68,8 +68,17 @@ export default function Account({ user, onSignOut, onDeleteAccount }) {
               <a className="acc-item" href="/privacy.html" role="menuitem">
                 Privacy
               </a>
-              <button className="acc-item" role="menuitem" disabled={busy} onClick={() => run(onSignOut, "Could not sign out. Try again.")}>
+              <button className="acc-item" role="menuitem" disabled={busy} onClick={() => run(onSignOut, "Could not sign out. Check your internet and try again.")}>
                 Sign out
+              </button>
+              <button
+                className="acc-item"
+                role="menuitem"
+                disabled={busy || user?.offline}
+                onClick={() => run(onSignOutEverywhere, "Could not sign out everywhere. Check your internet and try again.")}
+                title="Signs this account out on every phone and computer"
+              >
+                Sign out everywhere
               </button>
               <button className="acc-item acc-danger" role="menuitem" disabled={busy || user?.offline} onClick={() => setStep(1)}>
                 Delete my account

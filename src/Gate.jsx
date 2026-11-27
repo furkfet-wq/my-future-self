@@ -1,7 +1,7 @@
 import { Component, useCallback, useEffect, useState } from "react";
 import App from "./App.jsx";
 import SignIn, { googleSignOut } from "./components/SignIn.jsx";
-import { getMe, getDoc, putDoc, logout, deleteAccount } from "./lib/cloud.js";
+import { getMe, getDoc, putDoc, logout, logoutAll, deleteAccount } from "./lib/cloud.js";
 import { decideStart, readLocalDoc, writeLocalDoc, clearLocal, localVersion, OWNER_KEY, DIRTY_KEY } from "./lib/startup.js";
 import { cleanDoc, sameDoc } from "../shared/doc.js";
 
@@ -188,12 +188,9 @@ export default function Gate() {
     return () => window.removeEventListener("storage", onStorage);
   }, [phase, user]);
 
-  async function signOut() {
-    try {
-      await logout();
-    } catch {
-      /* the cookie ends anyway when it runs out */
-    }
+  // Throws when the server could not be reached, so the menu can say so (the session would otherwise stay valid).
+  async function signOut(everywhere = false) {
+    await (everywhere ? logoutAll() : logout());
     clearLocal();
     googleSignOut();
     location.reload();
@@ -273,8 +270,15 @@ export default function Gate() {
     );
 
   return (
-    <Crash onSignOut={signOut} onDeleteAccount={removeAccount}>
-      <App key={user.id} user={user} startVersion={version} onSignOut={signOut} onDeleteAccount={removeAccount} />
+    <Crash onSignOut={() => signOut(false).catch(() => alert("Could not sign out. Check your internet and try again."))} onDeleteAccount={removeAccount}>
+      <App
+        key={user.id}
+        user={user}
+        startVersion={version}
+        onSignOut={() => signOut(false)}
+        onSignOutEverywhere={() => signOut(true)}
+        onDeleteAccount={removeAccount}
+      />
     </Crash>
   );
 }

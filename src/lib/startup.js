@@ -61,6 +61,8 @@ export function writeLocalDoc(doc, owner, version = 0) {
   localStorage.setItem(VERSION_KEY, String(version));
 }
 
+// Signing out leaves nothing of this person in the browser (data, PIN, timer, stopwatch, notepad window).
+const DEVICE_KEYS = ["mfs-lock-v1", "mfs-lock-tries-v1", "mfs-timer-v1", "mfs-stopwatch-v1", "mfs-snooze-v1", "mfs-notepad-win-v1"];
 export function clearLocal() {
-  for (const k of [STORAGE_KEY, SETTINGS_KEY, OWNER_KEY, DIRTY_KEY, VERSION_KEY]) localStorage.removeItem(k);
+  for (const k of [STORAGE_KEY, SETTINGS_KEY, OWNER_KEY, DIRTY_KEY, VERSION_KEY, ...DEVICE_KEYS]) localStorage.removeItem(k);
 }

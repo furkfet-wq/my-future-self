@@ -152,7 +152,7 @@ function SyncToast({ note }) {
   ) : null;
 }
 
-export default function App({ user, startVersion, onSignOut, onDeleteAccount }) {
+export default function App({ user, startVersion, onSignOut, onSignOutEverywhere, onDeleteAccount }) {
   const [state, actions] = useStore();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -384,6 +384,10 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
           onSignOut={async () => {
             await flushSave().catch(() => {});
             await onSignOut();
+          }}
+          onSignOutEverywhere={async () => {
+            await flushSave().catch(() => {});
+            await onSignOutEverywhere();
           }}
           onDeleteAccount={onDeleteAccount}
         />

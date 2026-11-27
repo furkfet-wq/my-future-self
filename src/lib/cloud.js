@@ -23,6 +23,7 @@ async function call(path, { method = "GET", body, keepalive = false } = {}) {
 export const getMe = async () => (await call("/api/me")).user;
 export const login = async (credential) => (await call("/api/login", { method: "POST", body: { credential } })).user;
 export const logout = () => call("/api/logout", { method: "POST" });
+export const logoutAll = () => call("/api/logout-all", { method: "POST" });
 export const deleteAccount = () => call("/api/account", { method: "DELETE" });
 export const getDoc = () => call("/api/data");
 // -> { version } or { conflict: { data, version } } when another device saved first.

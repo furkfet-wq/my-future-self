@@ -59,7 +59,8 @@ export function useCloudSave({ userId, state, settings, startVersion, onRemote, 
         }
       }
     } catch (e) {
-      if (e.status === 403) return location.reload(); // another account signed in on this browser meanwhile
+      // 403: another account signed in on this browser meanwhile; 401: signed out (e.g. "Sign out everywhere")
+      if (e.status === 403 || e.status === 401) return location.reload();
       timer.current = setTimeout(save, RETRY_MS); // offline or server trouble: try again later, the change stays in this browser
     } finally {
       busy.current = false;

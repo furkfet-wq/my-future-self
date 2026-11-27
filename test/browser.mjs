@@ -593,3 +593,44 @@ test("resize and full size work", async () => {
   assert.equal(await page.getByRole("dialog", { name: "Notepad" }).count(), 0);
   await ctx.close();
 });
+
+// ---- account safety ----
+test("sign out everywhere signs out the other device", async () => {
+  const a = await browser.newContext();
+  const pa = await open(a);
+  await signInAs(pa, "s1");
+  const b = await browser.newContext();
+  const pb = await open(b);
+  await signInAs(pb, "s1");
+  await pa.click(".acc-btn");
+  await pa.getByRole("menuitem", { name: "Sign out everywhere" }).click();
+  await pa.locator("#fake-google").waitFor({ timeout: 10000 });
+  await pb.locator(".hg-box:not(.done)").first().click(); // its next save finds the session gone
+  await pb.locator("#fake-google").waitFor({ timeout: 15000 });
+  await a.close();
+  await b.close();
+});
+
+test("offline sign out says it failed and keeps you signed in", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await signInAs(page, "s2");
+  await page.route("**/api/logout", (r) => r.abort());
+  await page.click(".acc-btn");
+  await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
+  await page.getByText("Could not sign out").waitFor({ timeout: 10000 });
+  assert.ok(await page.locator("main.app").isVisible());
+  await ctx.close();
+});
+
+test("signing out removes the PIN from this browser", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await signInAs(page, "s3");
+  await page.evaluate(() => localStorage.setItem("mfs-lock-v1", JSON.stringify({ v: 1, salt: "00".repeat(16), hash: "11".repeat(32) })));
+  await page.click(".acc-btn");
+  await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
+  await page.locator("#fake-google").waitFor({ timeout: 10000 });
+  assert.equal(await page.evaluate(() => localStorage.getItem("mfs-lock-v1")), null);
+  await ctx.close();
+});

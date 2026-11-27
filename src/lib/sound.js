@@ -214,7 +214,7 @@ export function installGlobalSounds() {
   };
   const onKey = (e) => {
     const t = e.target;
-    if (!t || !(t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+    if (!t || !(t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
     if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") sfx.key();
     else if (e.key === "Enter") sfx.click();
   };

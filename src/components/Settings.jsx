@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 
-import { SETTINGS_KEY as KEY } from "../lib/startup.js";
-export const DEFAULT_SETTINGS = { muslim: true, alarm: true, prayerTimes: true, salahTable: true, verse: true, quote: true, hiddenGraphs: {} };
+import { SETTINGS_KEY as KEY, DEFAULT_SETTINGS } from "../lib/startup.js";
+export { DEFAULT_SETTINGS };
 
 // Every graph that can be hidden with its × button.
 export const GRAPHS = [

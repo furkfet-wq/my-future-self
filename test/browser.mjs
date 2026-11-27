@@ -436,3 +436,160 @@ test("stopwatch counts and records laps", async () => {
   assert.equal((await page.locator(".sw-time").textContent()).trim(), "00:00.00");
   await ctx.close();
 });
+
+// ---- Notepad ----
+async function openNotepad(page) {
+  await page.locator(".np-btn").click();
+  const win = page.getByRole("dialog", { name: "Notepad" });
+  await win.waitFor();
+  return win;
+}
+const editorOf = (page) => page.locator(".np-editor .ProseMirror");
+function walk(node, out = []) {
+  if (!node) return out;
+  out.push(node);
+  for (const c of node.content || []) walk(c, out);
+  return out;
+}
+
+test("notepad opens as a window with the site visible behind", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await open(ctx);
+  await signInAs(page, "n1");
+  const win = await openNotepad(page);
+  const b = await win.boundingBox();
+  assert.ok(b.width > 1280 * 0.7 && b.width < 1280 * 0.9, `width ${b.width}`);
+  assert.ok(b.height > 800 * 0.7 && b.height < 800 * 0.9, `height ${b.height}`);
+  assert.ok(await page.locator("main.app").isVisible());
+  await ctx.close();
+});
+
+test("typing in the notepad plays the key sound", async () => {
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(() => {
+    window.__sounds = 0;
+    const AC = window.AudioContext;
+    const orig = AC.prototype.createOscillator;
+    AC.prototype.createOscillator = function () {
+      window.__sounds++;
+      return orig.call(this);
+    };
+    const origB = AC.prototype.createBufferSource;
+    AC.prototype.createBufferSource = function () {
+      window.__sounds++;
+      return origB.call(this);
+    };
+  });
+  const page = await open(ctx);
+  await signInAs(page, "n2");
+  await openNotepad(page);
+  await editorOf(page).click();
+  const before = await page.evaluate(() => window.__sounds);
+  await page.keyboard.type("hello");
+  const after = await page.evaluate(() => window.__sounds);
+  assert.ok(after - before >= 5, `${after - before} sounds`);
+  await ctx.close();
+});
+
+test("formatting applies to the selection", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await signInAs(page, "n3");
+  const win = await openNotepad(page);
+  await editorOf(page).click();
+  await page.keyboard.type("hello world");
+  await editorOf(page).getByText("hello world").dblclick({ position: { x: 60, y: 8 } }); // selects "world"
+  await win.getByRole("button", { name: "Text colour red" }).click();
+  await win.getByLabel("Text size").selectOption("32px");
+  await win.getByRole("button", { name: "Highlight yellow" }).click();
+  await win.getByLabel("Font").selectOption("Georgia, serif");
+  await page.waitForTimeout(3000);
+  const nodes = walk((await serverDoc(ctx)).data.state.notes);
+  const world = nodes.find((n) => n.type === "text" && n.text.includes("world"));
+  assert.ok(world, "world saved");
+  const ts = world.marks.find((m) => m.type === "textStyle");
+  assert.deepEqual(ts.attrs, { color: "#ff5c5c", fontSize: "32px", fontFamily: "Georgia, serif" });
+  assert.deepEqual(world.marks.find((m) => m.type === "highlight").attrs, { color: "#ffd84c" });
+  const hello = nodes.find((n) => n.type === "text" && n.text.startsWith("hello"));
+  assert.ok(!hello.marks, "the rest is not formatted");
+  await ctx.close();
+});
+
+test("note survives a quick close", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await signInAs(page, "n4");
+  await openNotepad(page);
+  await editorOf(page).click();
+  await page.keyboard.type("quick note");
+  await page.waitForTimeout(300);
+  await page.reload();
+  await page.locator("main.app").waitFor({ timeout: 20000 });
+  await openNotepad(page);
+  await editorOf(page).getByText("quick note").waitFor();
+  await ctx.close();
+});
+
+test("note shows on another device", async () => {
+  const a = await browser.newContext();
+  const pa = await open(a);
+  await signInAs(pa, "n5");
+  await openNotepad(pa);
+  await editorOf(pa).click();
+  await pa.keyboard.type("from device A");
+  await pa.waitForTimeout(3000);
+  const b = await browser.newContext();
+  const pb = await open(b);
+  await signInAs(pb, "n5");
+  await openNotepad(pb);
+  await editorOf(pb).getByText("from device A").waitFor();
+  await a.close();
+  await b.close();
+});
+
+test("paste keeps only allowed styles", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await signInAs(page, "n6");
+  await openNotepad(page);
+  await editorOf(page).click();
+  await page.evaluate(() => {
+    const dt = new DataTransfer();
+    dt.setData("text/html", '<h1>Title</h1><p><a href="javascript:alert(1)">link</a> <span style="font-size:99px;color:red">big</span> <b>bold</b><script>window.__pwned=1</script><img src=x onerror="window.__pwned=1"></p>');
+    dt.setData("text/plain", "Title link big bold");
+    document.querySelector(".np-editor .ProseMirror").dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+  });
+  await page.waitForTimeout(3000);
+  const ed = editorOf(page);
+  assert.equal(await ed.locator("a, h1, script, img, [style*='99px']").count(), 0);
+  assert.equal(await page.evaluate(() => window.__pwned), undefined);
+  const nodes = walk((await serverDoc(ctx)).data.state.notes);
+  const text = nodes.filter((n) => n.type === "text").map((n) => n.text).join("");
+  assert.match(text, /Title/);
+  assert.match(text, /big/);
+  assert.ok(nodes.some((n) => n.marks?.some((m) => m.type === "bold")), "bold is allowed");
+  assert.ok(!JSON.stringify(nodes).includes("99px") && !JSON.stringify(nodes).includes('"red"'));
+  await ctx.close();
+});
+
+test("resize and full size work", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await open(ctx);
+  await signInAs(page, "n7");
+  const win = await openNotepad(page);
+  const b0 = await win.boundingBox();
+  const h = await page.locator(".np-resize").boundingBox();
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(h.x - 200, h.y - 150, { steps: 8 });
+  await page.mouse.up();
+  const b1 = await win.boundingBox();
+  assert.ok(b1.width < b0.width - 150 && b1.height < b0.height - 100, "smaller");
+  await win.getByRole("button", { name: "Full size" }).click();
+  const b2 = await win.boundingBox();
+  assert.ok(b2.width >= 1270 && b2.height >= 790, "full size");
+  await win.getByRole("button", { name: "Normal size" }).click();
+  await win.getByRole("button", { name: "Close notepad" }).click();
+  assert.equal(await page.getByRole("dialog", { name: "Notepad" }).count(), 0);
+  await ctx.close();
+});

@@ -30,6 +30,7 @@ import { hasPin, clearPin } from "./lib/lock.js";
 import { weekData, shiftKey, parseKey, dayStats, streak as perfectStreak, salahStreak } from "./lib/week.js";
 import { useCloudSave } from "./lib/sync.js";
 import { ClockButton, ClockPanel, Ringer } from "./components/Clock.jsx";
+import { Notepad, NotepadButton } from "./components/Notepad.jsx";
 import { dueAlarms } from "./lib/clock.js";
 import { alarmStart, alarmStop } from "./lib/sound.js";
 import Account from "./components/Account.jsx";
@@ -302,6 +303,7 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
 
   // Clock: alarms (saved with the account), timer + stopwatch + snooze (this device), checked every second.
   const [clockOpen, setClockOpen] = useState(false);
+  const [notepadOpen, setNotepadOpen] = useState(false);
   const [timer, setTimer] = useLocal("mfs-timer-v1", { endsAt: null, pausedLeft: null, total: 0 });
   const [sw, setSw] = useLocal("mfs-stopwatch-v1", { startedAt: null, banked: 0, laps: [] });
   const [snooze, setSnooze] = useLocal("mfs-snooze-v1", null); // { at, label }
@@ -398,6 +400,7 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
           onClose={() => setClockOpen(false)}
         />
       )}
+      {notepadOpen && <Notepad notes={state.notes} onNotes={actions.setNotes} onClose={() => setNotepadOpen(false)} />}
       {ring && (
         <Ringer
           ring={ring}
@@ -488,7 +491,12 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
           balance={balance}
           onOpenToday={() => goToDay(dateKey(new Date()), true)}
           muslim={muslim}
-          tools={<ClockButton onClick={() => setClockOpen(true)} />}
+          tools={
+            <>
+              <ClockButton onClick={() => setClockOpen(true)} />
+              <NotepadButton onClick={() => setNotepadOpen((o) => !o)} />
+            </>
+          }
         />
 
         <Header

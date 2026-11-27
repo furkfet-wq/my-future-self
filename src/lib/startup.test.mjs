@@ -42,10 +42,11 @@ test("hasEntries", () => {
 });
 
 beforeEach(() => mem.clear());
-test("write, read and clear the local copy", () => {
+test("write, read and clear the local copy", async () => {
   writeLocalDoc(remote, "A");
   assert.equal(localStorage.getItem(OWNER_KEY), "A");
-  assert.deepEqual(readLocalDoc(), { v: 1, state: { ...full, notes: null, alarms: [] }, settings: {} });
+  const { DEFAULT_SETTINGS } = await import("./startup.js");
+  assert.deepEqual(readLocalDoc(), { v: 1, state: { ...full, notes: null, alarms: [] }, settings: DEFAULT_SETTINGS });
   localStorage.setItem(DIRTY_KEY, "1");
   clearLocal();
   for (const k of [STORAGE_KEY, SETTINGS_KEY, OWNER_KEY, DIRTY_KEY]) assert.equal(localStorage.getItem(k), null);
@@ -73,4 +74,12 @@ test("the saved version travels with the local copy", async () => {
 test("readLocalDoc cleans broken entries", () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...full, logs: { "2026-11-01": null } }));
   assert.deepEqual(readLocalDoc().state.logs, {});
+});
+
+test("a browser copy without saved settings counts as the default settings", async () => {
+  const { DEFAULT_SETTINGS } = await import("./startup.js");
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(full));
+  localStorage.removeItem(SETTINGS_KEY);
+  assert.deepEqual(readLocalDoc().settings, DEFAULT_SETTINGS);
+  assert.equal(DEFAULT_SETTINGS.muslim, true);
 });

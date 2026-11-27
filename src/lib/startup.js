@@ -8,6 +8,9 @@ export const OWNER_KEY = "mfs-owner-v1"; // Google account id the browser copy b
 export const DIRTY_KEY = "mfs-dirty-v1"; // "1" while a change is not saved online yet
 export const VERSION_KEY = "mfs-version-v1"; // online version the browser copy was last saved as / loaded from
 
+// Settings a browser has until someone changes one (nothing is saved until then).
+export const DEFAULT_SETTINGS = { muslim: true, alarm: true, prayerTimes: true, salahTable: true, verse: true, quote: true, hiddenGraphs: {} };
+
 const nonEmpty = (o) => !!o && typeof o === "object" && Object.keys(o).length > 0;
 
 // Has this person actually entered anything? (The starter habits alone don't count.)
@@ -41,7 +44,7 @@ const read = (k) => {
 
 export function readLocalDoc() {
   const state = read(STORAGE_KEY);
-  return state ? cleanDoc({ v: DOC_VERSION, state, settings: read(SETTINGS_KEY) || {} }) : null;
+  return state ? cleanDoc({ v: DOC_VERSION, state, settings: { ...DEFAULT_SETTINGS, ...(read(SETTINGS_KEY) || {}) } }) : null;
 }
 
 export function localVersion() {

@@ -173,7 +173,11 @@ export default function Gate() {
       return;
     }
     if (me) afterSignIn(me);
-    else setPhase("signin");
+    else {
+      // signed out (maybe "Sign out everywhere" from another device): remove this browser's copy, it is safe online
+      if (localStorage.getItem(OWNER_KEY) && localStorage.getItem(DIRTY_KEY) !== "1") clearLocal();
+      setPhase("signin");
+    }
   }, [afterSignIn]);
 
   useEffect(() => {

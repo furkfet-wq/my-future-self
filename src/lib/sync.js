@@ -94,8 +94,10 @@ export function useCloudSave({ userId, state, settings, startVersion, onRemote, 
       try {
         const r = await getDoc();
         if (r.data && r.version > version.current && !pending.current) takeRemote(r.data, r.version);
-      } catch {
-        /* offline: keep what we have */
+      } catch (e) {
+        // signed out from another device ("Sign out everywhere") or another account here: back to sign-in
+        if (e.status === 401 || e.status === 403) location.reload();
+        /* otherwise offline: keep what we have */
       }
     };
     const onHide = () => {

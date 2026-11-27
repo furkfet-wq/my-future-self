@@ -64,6 +64,7 @@ export function Notepad({ notes, onNotes, onClose }) {
   const [, force] = useState(0);
   const onNotesRef = useRef(onNotes);
   onNotesRef.current = onNotes;
+  const lastSent = useRef(null); // the editor content last handed to the app (JSON string)
   const setWin = (v) => {
     const next = fit(v);
     setWinState(next);
@@ -105,18 +106,32 @@ export function Notepad({ notes, onNotes, onClose }) {
         return;
       }
       setMsg("");
+      lastSent.current = JSON.stringify(json);
       onNotesRef.current(json); // saved in this browser at once, online 2 s later
       setSaved(true);
+    },
+    onCreate: ({ editor: ed }) => {
+      lastSent.current = JSON.stringify(ed.getJSON());
     },
     onSelectionUpdate: () => force((n) => n + 1),
     onTransaction: () => force((n) => n + 1),
   });
 
-  // a newer copy from another device arrives while the notepad is open and not being typed in
+  // A newer copy from another device arrived. Show it, even with the cursor in the notepad, unless this editor has
+  // text the app has not been given yet (then that text is kept and handed over, so screen and saved copy agree).
   useEffect(() => {
-    if (!editor || editor.isFocused) return;
-    if (JSON.stringify(editor.getJSON()) !== JSON.stringify(notes || { type: "doc", content: [{ type: "paragraph" }] })) {
-      editor.commands.setContent(notes || "", { emitUpdate: false });
+    if (!editor) return;
+    const shown = JSON.stringify(editor.getJSON());
+    const incoming = notes || { type: "doc", content: [{ type: "paragraph" }] };
+    if (shown === JSON.stringify(incoming)) return;
+    if (shown === lastSent.current || !editor.isFocused) {
+      const { from } = editor.state.selection;
+      editor.commands.setContent(incoming, { emitUpdate: false });
+      lastSent.current = JSON.stringify(editor.getJSON());
+      if (editor.isFocused) editor.commands.setTextSelection(Math.min(from, editor.state.doc.content.size));
+    } else {
+      lastSent.current = shown;
+      onNotesRef.current(editor.getJSON());
     }
   }, [notes, editor]);
 

@@ -80,14 +80,12 @@ export function cleanAlarms(list) {
   return out;
 }
 
+// The chosen place keeps no coordinates: only its name and the prayer-times city (privacy).
 function cleanPlace(p) {
   if (!isObj(p) || !Number.isInteger(p.cityId) || p.cityId <= 0) return undefined;
-  const lat = p.lat;
-  const lon = p.lon;
-  if (typeof lat !== "number" || typeof lon !== "number" || !(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) return undefined;
   const str = (x) => (typeof x === "string" ? x.slice(0, 80) : "");
   const km = Number.isInteger(p.km) && p.km >= 0 && p.km <= 20000 ? p.km : 0;
-  return { name: str(p.name), region: str(p.region), country: str(p.country), lat, lon, cityId: p.cityId, km };
+  return { name: str(p.name), region: str(p.region), country: str(p.country), cityId: p.cityId, km };
 }
 
 function cleanTicks(days) {

@@ -195,3 +195,14 @@ test("nearest prayer city for coordinates", async () => {
 test("bad coordinates are 400", async () => {
   for (const q of ["lat=95&lon=0", "lat=abc&lon=1", "lat=1", ""]) assert.equal((await req(`/api/prayer-city?${q}`)).status, 400, q);
 });
+
+test("signed-in calls are limited per account, not per shared address", async () => {
+  const a = await signIn("shared-a");
+  const b = await signIn("shared-b");
+  const statuses = [];
+  for (let i = 0; i < 70; i++) {
+    statuses.push((await req("/api/data", { cookie: a, client: "school-wifi" })).status);
+    statuses.push((await req("/api/data", { cookie: b, client: "school-wifi" })).status);
+  }
+  assert.ok(statuses.every((s) => s === 200), `got ${[...new Set(statuses)].join(",")}`);
+});

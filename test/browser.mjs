@@ -634,3 +634,82 @@ test("signing out removes the PIN from this browser", async () => {
   assert.equal(await page.evaluate(() => localStorage.getItem("mfs-lock-v1")), null);
   await ctx.close();
 });
+
+// ---- final review fixes ----
+const wakeTab = (page) => page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+
+test("a newer note from another device replaces the open note even with the cursor in it", async () => {
+  const a = await browser.newContext();
+  const pa = await open(a);
+  await signInAs(pa, "f1");
+  await openNotepad(pa);
+  await editorOf(pa).click();
+  await pa.keyboard.type("old laptop text");
+  await pa.waitForTimeout(3000); // saved online
+  const b = await browser.newContext();
+  const pb = await open(b);
+  await signInAs(pb, "f1");
+  await openNotepad(pb);
+  await editorOf(pb).click();
+  await pb.keyboard.press("Control+a");
+  await pb.keyboard.type("phone text");
+  await pb.waitForTimeout(3000);
+  await editorOf(pa).click(); // the laptop's cursor is in the notepad
+  await wakeTab(pa);
+  await editorOf(pa).getByText("phone text").waitFor({ timeout: 10000 });
+  await pa.keyboard.press("End");
+  await pa.keyboard.type("!");
+  await pa.waitForTimeout(3000);
+  const text = walk((await serverDoc(a)).data.state.notes).filter((n) => n.type === "text").map((n) => n.text).join("");
+  assert.match(text, /phone text/);
+  assert.doesNotMatch(text, /old laptop text/);
+  await a.close();
+  await b.close();
+});
+
+test("the place picker keeps keyboard focus where you put it", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await signInAs(page, "f2");
+  await page.locator("#prayer-times").getByRole("button", { name: "Change" }).click();
+  await page.getByRole("button", { name: "Use my location" }).focus();
+  await page.waitForTimeout(2500);
+  assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Use my location");
+  await ctx.close();
+});
+
+test("Use my location sends only a rough position and saves no coordinates", async () => {
+  const ctx = await browser.newContext({ geolocation: { latitude: 41.012345, longitude: 28.976543 }, permissions: ["geolocation"] });
+  const page = await open(ctx);
+  await signInAs(page, "f3");
+  let asked = null;
+  page.on("request", (r) => r.url().includes("/api/prayer-city") && (asked = new URL(r.url())));
+  await page.locator("#prayer-times").getByRole("button", { name: "Change" }).click();
+  await page.getByRole("button", { name: "Use my location" }).click();
+  await page.locator("#prayer-times").getByText("İstanbul").first().waitFor({ timeout: 10000 });
+  assert.equal(asked.searchParams.get("lat"), "41");
+  assert.equal(asked.searchParams.get("lon"), "29");
+  await page.waitForTimeout(3000);
+  const place = (await serverDoc(ctx)).data.settings.place;
+  assert.equal(place.cityId, 5041);
+  assert.equal(place.lat, undefined);
+  assert.equal(place.lon, undefined);
+  await ctx.close();
+});
+
+test("sign out everywhere closes the app on an open lost device and clears its copy", async () => {
+  const a = await browser.newContext();
+  const pa = await open(a);
+  await signInAs(pa, "f4");
+  const b = await browser.newContext();
+  const pb = await open(b);
+  await signInAs(pb, "f4");
+  await pa.click(".acc-btn");
+  await pa.getByRole("menuitem", { name: "Sign out everywhere" }).click();
+  await pa.locator("#fake-google").waitFor({ timeout: 10000 });
+  await wakeTab(pb); // the lost device's tab comes back into view
+  await pb.locator("#fake-google").waitFor({ timeout: 15000 });
+  assert.equal(await pb.evaluate(() => localStorage.getItem("habit-tracker-v1")), null);
+  await a.close();
+  await b.close();
+});

@@ -120,9 +120,9 @@ test("alarms are cleaned", () => {
 });
 
 test("place is kept only when it is valid", () => {
-  const place = { name: "Istanbul", region: "Istanbul", country: "Türkiye", lat: 41.01, lon: 28.98, cityId: 5041, km: 3 };
+  const place = { name: "Istanbul", region: "Istanbul", country: "Türkiye", cityId: 5041, km: 3 };
   assert.deepEqual(cleanDoc({ ...good(), settings: { place } }).settings.place, place);
-  assert.equal(cleanDoc({ ...good(), settings: { place: { ...place, lat: 200 } } }).settings.place, undefined);
+  assert.equal(cleanDoc({ ...good(), settings: { place: { ...place, cityId: 0 } } }).settings.place, undefined);
   assert.equal(cleanDoc({ ...good(), settings: { place: { ...place, cityId: "5041" } } }).settings.place, undefined);
   assert.equal(cleanDoc({ ...good(), settings: { place: { ...place, name: "y".repeat(200) } } }).settings.place.name.length, 80);
 });
@@ -130,4 +130,9 @@ test("place is kept only when it is valid", () => {
 test("muslim must be a boolean", () => {
   assert.equal(cleanDoc({ ...good(), settings: { muslim: false } }).settings.muslim, false);
   assert.equal(cleanDoc({ ...good(), settings: { muslim: "no" } }).settings.muslim, undefined);
+});
+
+test("place keeps no coordinates (privacy)", () => {
+  const place = { name: "My location", region: "", country: "", lat: 41.0123, lon: 28.9765, cityId: 5041, km: 2 };
+  assert.deepEqual(cleanDoc({ ...good(), settings: { place } }).settings.place, { name: "My location", region: "", country: "", cityId: 5041, km: 2 });
 });

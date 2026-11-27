@@ -10,14 +10,15 @@ async function api(request, env, path) {
   if (refused) return refused;
   const m = request.method;
   const ip = clientKey(request, env);
-  const tooMany = await limit(env.RL_API, `api:${ip}`);
-  if (tooMany) return tooMany;
 
-  if (path === "/api/prayer-city" && m === "GET") return prayerCity(request);
+  if (path === "/api/prayer-city" && m === "GET") return (await limit(env.RL_API, `api:${ip}`)) || prayerCity(request);
   if (path === "/api/login" && m === "POST") return (await limit(env.RL_LOGIN, `login:${ip}`)) || login(request, env);
-  if (path === "/api/logout" && m === "POST") return logout(request, env);
+  if (path === "/api/logout" && m === "POST") return (await limit(env.RL_API, `api:${ip}`)) || logout(request, env);
 
   const user = await getUser(request, env);
+  // signed in: limited per account (many people can share one school or phone-network address); otherwise per address
+  const tooMany = await limit(env.RL_API, user ? `user:${user.id}` : `api:${ip}`);
+  if (tooMany) return tooMany;
   const renew = user?.renewCookie ? { "Set-Cookie": user.renewCookie } : {};
   if (path === "/api/me" && m === "GET") return json({ user: user ? publicUser(user) : null }, 200, renew);
 

@@ -16,13 +16,16 @@ export default function PlacePicker({ place, onPick, onClose }) {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const input = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
+  // focus the search once (the card re-renders every second, so nothing here may depend on onClose)
   useEffect(() => {
     input.current?.focus();
-    const onKey = (e) => e.key === "Escape" && onClose();
+    const onKey = (e) => e.key === "Escape" && onCloseRef.current();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, []);
 
   // search 0.4 s after typing stops
   useEffect(() => {
@@ -53,12 +56,13 @@ export default function PlacePicker({ place, onPick, onClose }) {
     };
   }, [q]);
 
+  // Only a rough position (1 decimal, about 10 km) ever leaves the browser, and no coordinates are saved.
   async function choose(name, region, country, lat, lon) {
     setBusy(true);
     setMsg("");
     try {
-      const { id, km } = await nearest(lat, lon);
-      onPick({ name, region: region || "", country: country || "", lat, lon, cityId: id, km });
+      const { id, km } = await nearest(Math.round(lat * 10) / 10, Math.round(lon * 10) / 10);
+      onPick({ name, region: region || "", country: country || "", cityId: id, km });
     } catch {
       setMsg("Could not find prayer times for that place right now. Try again.");
     } finally {
@@ -71,7 +75,7 @@ export default function PlacePicker({ place, onPick, onClose }) {
     setBusy(true);
     setMsg("");
     navigator.geolocation.getCurrentPosition(
-      (pos) => choose("My location", "", "", Math.round(pos.coords.latitude * 1000) / 1000, Math.round(pos.coords.longitude * 1000) / 1000),
+      (pos) => choose("My location", "", "", pos.coords.latitude, pos.coords.longitude),
       () => {
         setBusy(false);
         setMsg("Location was not shared. Search for your town instead.");

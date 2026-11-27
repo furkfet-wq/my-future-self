@@ -1,6 +1,6 @@
 # Clock, Notepad and Muslim mode
 
-Date: 2026-11-27. Status: updated with the owner's changes (notepad window, own timer, prayer location); waiting for approval.
+Date: 2026-11-27. Status: approved by the owner, plus a security pass they asked for ("make sure users' information is safe").
 
 ## Why
 
@@ -94,6 +94,32 @@ and a notepad), and a Muslim mode so people who are not Muslim can use the app w
   sees), and countdowns use the place's time zone (`tz` from the search) so they are right even when the device is
   elsewhere.
 - Privacy page and CSP updated for the two new services.
+
+## Security pass (owner: "make sure the website actually protects them")
+
+Already in place: Google token checked by the Worker, HttpOnly + Secure + SameSite session cookie (only its hash
+stored), Origin check on every change, each account can only read/write its own data, saves naming another account
+refused, every incoming copy cleaned, CSP blocking outside scripts, no framing, D1 encrypted at rest by Cloudflare.
+
+Add:
+1. **Rate limits** (Workers rate-limiting binding): sign-in 10/min per IP, data saves 60/min per account,
+   prayer times and other API calls 120/min per IP; over the limit -> 429 and the app retries later. Protects
+   accounts from password-style guessing of sessions and protects the shared free quota.
+2. **Stronger cookie name** `__Host-mfs_session` (the browser then refuses it from any other site or path).
+   Everyone signs in once more after the update.
+3. **More security headers:** Strict-Transport-Security (1 year), Permissions-Policy (no camera, microphone,
+   payment; location only for this site's "Use my location"), X-Frame-Options DENY.
+4. **"Sign out everywhere"** in the account menu: ends every session of that account (lost or shared device).
+5. **Fix the deferred minors:** signing out when offline says it failed instead of leaving the session valid;
+   a 401 while saving goes back to the sign-in screen; an unknown Google key id refetches Google's keys once;
+   signing out also removes the PIN from that browser.
+6. **Notes and alarms** are plain data checked against an allow-list (no HTML is ever stored or injected).
+7. **No personal data in logs:** Worker errors log only the error, never tokens, emails or notes.
+8. **Final security review** of the whole change by a separate reviewer before going live, plus `npm audit`.
+
+Honest limit (tell the owner): the data is protected from other users and outsiders, but it is not end-to-end
+encrypted. Whoever controls the Cloudflare account (the owner) could read it. That is normal for this kind of app
+and must stay in the privacy page.
 
 ## Data
 - Account document `state` gains `notes` (TipTap JSON or null) and `alarms` (list of

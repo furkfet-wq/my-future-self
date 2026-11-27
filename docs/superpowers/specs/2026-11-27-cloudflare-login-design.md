@@ -65,9 +65,10 @@ sign in with Google and have their data saved online.
 
 ### Sign-in
 
-- Not signed in: after the PIN lock (if on) the app shows a full-screen sign-in screen in the app's
+- Not signed in: the app shows a full-screen sign-in screen in the app's
   black/white style ("My Future Self", one line of text, Google's sign-in button, link to the privacy
-  page). Nothing else loads until sign-in succeeds. Then the normal loader and page run.
+  page). Nothing else loads until sign-in succeeds. Then the PIN lock (if on, builder's call: PIN
+  after sign-in), the normal loader and page run.
 - Google Identity Services (GIS) button. Google's branding rules require the Google "G" logo for
   sign-in buttons (the Gmail logo is not allowed; the owner was told).
 - Signed in: a round account button with the person's Google picture sits right next to the Settings

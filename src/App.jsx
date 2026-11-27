@@ -24,10 +24,13 @@ import { WeekDotLine, WeekRisingBars, WeekStatLine } from "./components/ExtraCha
 import { sfx, isMuted, setMuted, onMuteChange } from "./lib/sound.js";
 import { loadPrayerTimes, MAIN, SALAH, prayerName } from "./lib/prayer.js";
 import { SalahCard, PrayerAlarm, PrayerTimesCard } from "./components/Salah.jsx";
-import { SettingsPanel, GearButton, loadSettings, saveSettings } from "./components/Settings.jsx";
+import { SettingsPanel, GearButton, loadSettings, saveSettings, DEFAULT_SETTINGS } from "./components/Settings.jsx";
 import Lock from "./components/Lock.jsx";
 import { hasPin, clearPin } from "./lib/lock.js";
 import { weekData, shiftKey, parseKey, dayStats, streak as perfectStreak, salahStreak } from "./lib/week.js";
+import { useCloudSave } from "./lib/sync.js";
+import Account from "./components/Account.jsx";
+import "./components/account.css";
 
 // The angry cube hits the screen: a soft glow where it hit and a smooth, fading page shake.
 function ScreenHit() {
@@ -116,7 +119,16 @@ function Card({ id, gid, onHide, title, note, className = "", children }) {
   );
 }
 
-export default function App() {
+// Short note at the bottom of the screen (e.g. when a newer copy came from another device).
+function SyncToast({ note }) {
+  return note ? (
+    <div className="sync-toast" role="status" key={note.id}>
+      {note.text}
+    </div>
+  ) : null;
+}
+
+export default function App({ user, startVersion, onSignOut, onDeleteAccount }) {
   const [state, actions] = useStore();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -163,6 +175,25 @@ export default function App() {
   };
   const [askHide, setAskHide] = useState(null); // { gid, title }
   const hidden = settings.hiddenGraphs || {};
+
+  // Online saving for the signed-in account (see lib/sync.js)
+  const [syncNote, setSyncNote] = useState(null);
+  const flushSave = useCloudSave({
+    state,
+    settings,
+    startVersion,
+    offline: !!user?.offline,
+    onRemote: (doc) => {
+      actions.replace(doc.state);
+      changeSettings({ ...DEFAULT_SETTINGS, ...doc.settings });
+      setSyncNote({ id: Date.now(), text: "Updated from another device" });
+    },
+  });
+  useEffect(() => {
+    if (!syncNote) return undefined;
+    const id = setTimeout(() => setSyncNote(null), 3500);
+    return () => clearTimeout(id);
+  }, [syncNote]);
   const hideGraph = (gid, title) => setAskHide({ gid, title });
   const G = (gid) => ({ gid, onHide: hideGraph });
 
@@ -279,6 +310,17 @@ export default function App() {
         />
       )}
       {ready && <GearButton onClick={() => setSettingsOpen(true)} />}
+      {ready && (
+        <Account
+          user={user}
+          onSignOut={async () => {
+            await flushSave().catch(() => {});
+            await onSignOut();
+          }}
+          onDeleteAccount={onDeleteAccount}
+        />
+      )}
+      <SyncToast note={syncNote} />
       <SoundToggle />
       <ScreenHit />
       {settingsOpen && (

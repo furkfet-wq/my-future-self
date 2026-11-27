@@ -23,18 +23,22 @@ function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return seed();
-    const s = JSON.parse(raw);
-    if (!s || !Array.isArray(s.habits)) return seed();
-    return {
-      habits: s.habits,
-      checks: s.checks || {},
-      logs: s.logs || {},
-      salah: s.salah || {},
-      startBalance: Number.isFinite(s.startBalance) ? s.startBalance : 0,
-    };
+    return clean(JSON.parse(raw));
   } catch {
     return seed();
   }
+}
+
+// Keeps only the known fields (used for saved copies and copies from another device).
+function clean(s) {
+  if (!s || !Array.isArray(s.habits)) return seed();
+  return {
+    habits: s.habits,
+    checks: s.checks || {},
+    logs: s.logs || {},
+    salah: s.salah || {},
+    startBalance: Number.isFinite(s.startBalance) ? s.startBalance : 0,
+  };
 }
 
 function reducer(state, action) {
@@ -94,6 +98,8 @@ function reducer(state, action) {
       else delete salah[key];
       return { ...state, salah };
     }
+    case "replace":
+      return clean(action.state);
     case "setStartBalance":
       return { ...state, startBalance: Number.isFinite(action.value) ? action.value : 0 };
     default:
@@ -121,6 +127,7 @@ export function useStore() {
     setLog: (key, patch) => dispatch({ type: "setLog", key, patch }),
     setStartBalance: (value) => dispatch({ type: "setStartBalance", value }),
     toggleSalah: (key, id) => dispatch({ type: "toggleSalah", key, id }),
+    replace: (state) => dispatch({ type: "replace", state }),
   };
   return [state, actions];
 }

@@ -175,6 +175,7 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
   };
   const [askHide, setAskHide] = useState(null); // { gid, title }
   const hidden = settings.hiddenGraphs || {};
+  const muslim = settings.muslim !== false; // Muslim mode off hides every Islamic part (data is kept)
 
   // Online saving for the signed-in account (see lib/sync.js)
   const [syncNote, setSyncNote] = useState(null);
@@ -348,7 +349,7 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
           }}
         />
       )}
-      {ready && (
+      {ready && muslim && (
         <PrayerAlarm
           state={state}
           prayer={prayer}
@@ -399,9 +400,9 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
       {!locked && loading && <Loader onLift={() => setReady(true)} onDone={() => setLoading(false)} />}
       {ready && (
       <main className="app">
-        <Hero streak={heldStreak?.h ?? streakDays} salahStreak={heldStreak?.s ?? salahDays} pulse={pulse.h} salahPulse={pulse.s} showVerse={settings.verse} showQuote={settings.quote} />
+        <Hero streak={heldStreak?.h ?? streakDays} salahStreak={heldStreak?.s ?? salahDays} pulse={pulse.h} salahPulse={pulse.s} showVerse={settings.verse} showQuote={settings.quote} muslim={muslim} />
 
-        <TodayPanel state={state} balance={balance} onOpenToday={() => goToDay(dateKey(new Date()), true)} />
+        <TodayPanel state={state} balance={balance} onOpenToday={() => goToDay(dateKey(new Date()), true)} muslim={muslim} />
 
         <Header
           year={year}
@@ -434,7 +435,7 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
           />
         </Card>
 
-        {settings.prayerTimes && (
+        {muslim && settings.prayerTimes && (
           <PrayerTimesCard
             state={state}
             prayer={prayer}
@@ -447,7 +448,7 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
           />
         )}
 
-        {settings.salahTable && <SalahCard
+        {muslim && settings.salahTable && <SalahCard
           state={state}
           prayer={prayer}
           year={year}
@@ -502,6 +503,7 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
           </Card>}
         </div>
 
+        {muslim && <>
         <div className="wk-head">
           <h2>Salah this month</h2>
         </div>
@@ -519,8 +521,9 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
             <HabitPerformanceBars data={salahAll.habits} />
           </Card>}
         </div>
+        </>}
 
-        <AllDays state={state} onEdit={(key) => goToDay(key, true)} />
+        <AllDays state={state} onEdit={(key) => goToDay(key, true)} muslim={muslim} />
       </main>
       )}
     </>

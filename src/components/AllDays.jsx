@@ -14,7 +14,7 @@ const RANGES = [
 
 const STAT_TABS = [...TABS, { id: "balance", label: "Total money", unit: "£" }];
 
-function DayDetail({ state, d, onEdit }) {
+function DayDetail({ state, d, onEdit, muslim }) {
   const ref = useRef(null);
   useGSAP(
     () => {
@@ -48,14 +48,14 @@ function DayDetail({ state, d, onEdit }) {
           <div><dt>Money made</dt><dd>{fmtMoney(d.money)}</dd></div>
           <div><dt>Money spent</dt><dd>{fmtMoney(d.spent)}</dd></div>
           <div><dt>Distracted</dt><dd>{fmtMins(d.distracted)}</dd></div>
-          <div>
+          {muslim && <div>
             <dt>Salah prayed</dt>
             <dd>
               {MAIN.filter((id) => state.salah?.[d.key]?.[id]).length}/5
               {SALAH.some((p) => p.optional && state.salah?.[d.key]?.[p.id]) &&
                 ` + ${SALAH.filter((p) => p.optional && state.salah?.[d.key]?.[p.id]).length} optional`}
             </dd>
-          </div>
+          </div>}
           <div><dt>Total money after this day</dt><dd>{fmtMoney(d.balance)}</dd></div>
         </dl>
         <button className="ad-edit" onClick={() => onEdit(d.key)}>
@@ -66,7 +66,7 @@ function DayDetail({ state, d, onEdit }) {
   );
 }
 
-export default function AllDays({ state, onEdit }) {
+export default function AllDays({ state, onEdit, muslim = true }) {
   const [range, setRange] = useState(30);
   const [openKey, setOpenKey] = useState(null);
   const todayKey = dateKey(new Date());
@@ -124,7 +124,7 @@ export default function AllDays({ state, onEdit }) {
         <div><span>Best day</span><b>{best && best.pct > 0 ? `${best.short} (${best.pct}%)` : "–"}</b></div>
         <div><span>100% habit days</span><b>{perfectDays}</b></div>
         <div><span>Longest 100% streak</span><b>{longest} day{longest === 1 ? "" : "s"}</b></div>
-        <div><span>Main salah prayed</span><b>{salahDone} ({salahPct}%)</b></div>
+        {muslim && <div><span>Main salah prayed</span><b>{salahDone} ({salahPct}%)</b></div>}
         <div><span>Total money now</span><b>{fmtMoney(endBalance)}</b></div>
       </div>
 
@@ -178,7 +178,7 @@ export default function AllDays({ state, onEdit }) {
                   <span role="cell">{fmtMins(d.distracted)}</span>
                   <span role="cell" className="ad-dim">{fmtMoney(d.balance)}</span>
                 </button>
-                {open && <DayDetail state={state} d={d} onEdit={onEdit} />}
+                {open && <DayDetail state={state} d={d} onEdit={onEdit} muslim={muslim} />}
               </div>
             );
           })}

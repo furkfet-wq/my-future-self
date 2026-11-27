@@ -144,7 +144,9 @@ const ANGRY_LINES = [
   "Give me 20 push-ups.",
 ];
 
-function CubeMessage() {
+function CubeMessage({ muslim }) {
+  const lines = useRef(ANGRY_LINES);
+  lines.current = muslim ? ANGRY_LINES : ANGRY_LINES.filter((l) => l !== "Pray your salah.");
   const [msg, setMsg] = useState(null);
   const last = useRef(-1);
   const box = useRef(null);
@@ -152,10 +154,11 @@ function CubeMessage() {
   useEffect(() => {
     const on = () => {
       let i;
-      do i = Math.floor(Math.random() * ANGRY_LINES.length);
+      const list = lines.current;
+      do i = Math.floor(Math.random() * list.length);
       while (i === last.current);
       last.current = i;
-      setMsg({ id: Date.now(), text: ANGRY_LINES[i] });
+      setMsg({ id: Date.now(), text: list[i] });
     };
     window.addEventListener("mfs:screen-hit", on);
     return () => window.removeEventListener("mfs:screen-hit", on);
@@ -214,16 +217,16 @@ function Streak({ days, pulse, what, label }) {
   );
 }
 
-export default function Hero({ streak = 0, salahStreak = 0, pulse = 0, salahPulse = 0, showVerse = true, showQuote = true }) {
+export default function Hero({ streak = 0, salahStreak = 0, pulse = 0, salahPulse = 0, showVerse = true, showQuote = true, muslim = true }) {
   return (
     <section className="hero" id="top">
-      {showVerse ? <DailyVerse /> : <div className="hx hx-empty" />}
+      {showVerse && muslim ? <DailyVerse /> : <div className="hx hx-empty" />}
       <div className="hero-mid">
         <div className="hx-streaks">
           <Streak days={streak} pulse={pulse} what="habits at 100%" label="Habit" />
-          <Streak days={salahStreak} pulse={salahPulse} what="all 5 salah" label="Salah" />
+          {muslim && <Streak days={salahStreak} pulse={salahPulse} what="all 5 salah" label="Salah" />}
         </div>
-        <CubeMessage />
+        <CubeMessage muslim={muslim} />
         <Suspense fallback={<div className="rk" aria-hidden="true" />}>
           <RubikHero />
         </Suspense>

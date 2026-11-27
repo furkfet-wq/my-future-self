@@ -19,7 +19,7 @@ function useNow() {
 
 const pad = (n) => String(n).padStart(2, "0");
 
-export default function TodayPanel({ state, balance, onOpenToday }) {
+export default function TodayPanel({ state, balance, onOpenToday, muslim = true }) {
   const now = useNow();
   const key = dateKey(now);
   const s = useMemo(() => dayStats(state, key), [state, key]);
@@ -57,16 +57,20 @@ export default function TodayPanel({ state, balance, onOpenToday }) {
         </div>
         <div className="tp-pct">{s.pct}%</div>
 
-        <div className="tp-row tp-row-2">
-          <span>Today's salah</span>
-          <b>
-            {prayed}/{MAIN.length}
-          </b>
-        </div>
-        <div className="tp-bar">
-          <i style={{ width: `${salahPct}%` }} />
-        </div>
-        <div className="tp-pct">{salahPct}%</div>
+        {muslim && (
+          <>
+            <div className="tp-row tp-row-2">
+              <span>Today's salah</span>
+              <b>
+                {prayed}/{MAIN.length}
+              </b>
+            </div>
+            <div className="tp-bar">
+              <i style={{ width: `${salahPct}%` }} />
+            </div>
+            <div className="tp-pct">{salahPct}%</div>
+          </>
+        )}
         <button className="tp-go" onClick={onOpenToday}>
           Log today
         </button>

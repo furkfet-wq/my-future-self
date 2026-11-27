@@ -311,3 +311,41 @@ test("search failure keeps the place", async () => {
   await card.getByText("Coventry").first().waitFor();
   await ctx.close();
 });
+
+// ---- Muslim mode ----
+test("Muslim mode off hides every Islamic part and on brings it back", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await signInAs(page, "m1");
+  await page.locator("#salah .hg-box:not(.done)").first().click(); // a salah tick that must survive
+  const islamic = {
+    verse: page.locator(".hx-verse"),
+    salahTable: page.locator("#salah"),
+    prayerTimes: page.locator("#prayer-times"),
+    salahMonth: page.getByRole("heading", { name: "Salah this month" }),
+    todaySalah: page.getByText("Today's salah"),
+    salahStreak: page.getByText("all 5 salah"),
+    allDaysSalah: page.getByText("Main salah prayed"),
+  };
+  for (const [k, l] of Object.entries(islamic)) assert.ok((await l.count()) > 0, `${k} shown when on`);
+
+  const toggle = async () => {
+    await page.click(".gear");
+    await page.getByRole("switch", { name: "Muslim mode" }).click();
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(400);
+  };
+  await toggle();
+  for (const [k, l] of Object.entries(islamic)) assert.equal(await l.count(), 0, `${k} hidden when off`);
+  await page.click(".gear");
+  for (const name of ["Prayer alarm", "Prayer times", "Salah table", "Quran verse"]) assert.equal(await page.getByRole("switch", { name }).count(), 0, `${name} switch hidden`);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(3000);
+  const saved = (await serverDoc(ctx)).data;
+  assert.equal(saved.settings.muslim, false);
+  assert.ok(Object.keys(saved.state.salah).length > 0, "salah ticks are kept");
+
+  await toggle();
+  for (const [k, l] of Object.entries(islamic)) assert.ok((await l.count()) > 0, `${k} back when on`);
+  await ctx.close();
+});

@@ -67,6 +67,7 @@ function Switch({ label, hint, on, onChange }) {
 export function SettingsPanel({ settings, onChange, onClose, onTestAlarm, onChangePin, pinOn, onPin }) {
   const root = useRef(null);
   const set = (k) => (v) => onChange({ ...settings, [k]: v });
+  const muslim = settings.muslim !== false;
 
   useGSAP(
     () => {
@@ -96,10 +97,15 @@ export function SettingsPanel({ settings, onChange, onClose, onTestAlarm, onChan
             ×
           </button>
         </div>
-        <Switch label="Prayer alarm" hint="Rings 15 min 36 sec before a daily prayer ends if it is not ticked" on={settings.alarm} onChange={set("alarm")} />
-        <Switch label="Prayer times" hint="Today's prayer times with live countdowns" on={settings.prayerTimes} onChange={set("prayerTimes")} />
-        <Switch label="Salah table" hint="The grid where you tick each prayer" on={settings.salahTable} onChange={set("salahTable")} />
-        <Switch label="Quran verse" hint="Verse of the day next to the cube" on={settings.verse} onChange={set("verse")} />
+        <Switch label="Muslim mode" hint="Salah, prayer times, prayer alarm and the Quran verse. Off hides them; nothing is deleted." on={muslim} onChange={set("muslim")} />
+        {muslim && (
+          <>
+            <Switch label="Prayer alarm" hint="Rings 15 min 36 sec before a daily prayer ends if it is not ticked" on={settings.alarm} onChange={set("alarm")} />
+            <Switch label="Prayer times" hint="Today's prayer times with live countdowns" on={settings.prayerTimes} onChange={set("prayerTimes")} />
+            <Switch label="Salah table" hint="The grid where you tick each prayer" on={settings.salahTable} onChange={set("salahTable")} />
+            <Switch label="Quran verse" hint="Verse of the day next to the cube" on={settings.verse} onChange={set("verse")} />
+          </>
+        )}
         <Switch label="Motivation quote" hint="Quote next to the cube" on={settings.quote} onChange={set("quote")} />
         <Switch label="PIN lock" hint="Ask for a 10-digit PIN when the app opens. Off by default." on={pinOn} onChange={onPin} />
         {pinOn && (
@@ -112,7 +118,7 @@ export function SettingsPanel({ settings, onChange, onClose, onTestAlarm, onChan
           </div>
         )}
         <h3 className="st-sub">Graphs</h3>
-        {GRAPHS.map(([id, label]) => (
+        {GRAPHS.filter(([id]) => muslim || !id.startsWith("s-")).map(([id, label]) => (
           <Switch
             key={id}
             label={label}
@@ -120,13 +126,15 @@ export function SettingsPanel({ settings, onChange, onClose, onTestAlarm, onChan
             onChange={(v) => onChange({ ...settings, hiddenGraphs: { ...settings.hiddenGraphs, [id]: !v } })}
           />
         ))}
-        <div className="st-test">
-          <div>
-            <b>Test alarm</b>
-            <span>Plays the alarm now so you can hear and see it. Stop it from the red banner.</span>
+        {muslim && (
+          <div className="st-test">
+            <div>
+              <b>Test alarm</b>
+              <span>Plays the prayer alarm now so you can hear and see it. Stop it from the red banner.</span>
+            </div>
+            <button onClick={onTestAlarm}>Test alarm</button>
           </div>
-          <button onClick={onTestAlarm}>Test alarm</button>
-        </div>
+        )}
       </div>
     </div>
   );

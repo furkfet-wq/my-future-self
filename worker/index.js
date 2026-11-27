@@ -3,6 +3,7 @@
 import { json } from "./http.js";
 import { requireSameOrigin, getUser, publicUser, login, logout } from "./session.js";
 import { getData, putData, deleteAccount } from "./data.js";
+import { prayerTimes } from "./prayer.js";
 
 async function api(request, env, path) {
   const refused = requireSameOrigin(request, env);
@@ -26,10 +27,11 @@ async function api(request, env, path) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
     try {
       if (pathname.startsWith("/api/")) return await api(request, env, pathname);
+      if (pathname === "/prayer-times.json") return await prayerTimes(request, env, ctx);
       return env.ASSETS.fetch(request);
     } catch (e) {
       console.error(e);

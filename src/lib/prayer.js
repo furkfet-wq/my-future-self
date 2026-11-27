@@ -7,7 +7,7 @@ import { dateKey } from "./dates.js";
    aksam = Maghrib, yatsi = Isha). */
 
 const PAGE = "/namaz/en/city/3170/coventry-prayer-times";
-// On the live site (GitHub Pages) a daily GitHub job saves the same times as prayer-times.json.
+// On the live site the Worker answers prayer-times.json (worker/prayer.js), cached 6 hours.
 const ENV = import.meta.env || {};
 const STATIC_FILE = `${ENV.BASE_URL || "/"}prayer-times.json`;
 const CACHE = "mfs-prayer-v1";

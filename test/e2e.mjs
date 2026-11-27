@@ -192,3 +192,20 @@ test("delete account removes everything", async () => {
   const again = await signIn("gone");
   assert.deepEqual(await (await req("/api/data", { cookie: again })).json(), { data: null, version: 0 });
 });
+
+// ---- Task 5: prayer times + page headers ----
+test("prayer times answer rows (fallback when the site fails)", async () => {
+  const res = await req("/prayer-times.json");
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.rows) && body.rows.length >= 7);
+  assert.ok(body.rows[0].date && body.rows[0].imsak);
+});
+
+test("pages carry the CSP header", async () => {
+  const res = await req("/");
+  assert.equal(res.status, 200);
+  const csp = res.headers.get("content-security-policy") || "";
+  assert.ok(csp.includes("default-src 'self'") && csp.includes("https://accounts.google.com/gsi/client"));
+  assert.equal(res.headers.get("cross-origin-opener-policy"), "same-origin-allow-popups");
+});

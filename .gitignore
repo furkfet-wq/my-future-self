@@ -6,7 +6,6 @@ dist/
 .env.*
 .DS_Store
 Thumbs.db
-public/prayer-times.json
 .wrangler/
 .dev.vars
 .superpowers/

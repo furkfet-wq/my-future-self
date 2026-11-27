@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "node --test \"shared/*.test.mjs\" \"worker/*.test.mjs\" \"src/lib/*.test.mjs\"",
     "test:e2e": "node --test --test-concurrency=1 test/e2e.mjs",
-    "deploy": "vite build && wrangler deploy"
+    "deploy": "node scripts/fetch-prayer-times.mjs && vite build && wrangler deploy"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

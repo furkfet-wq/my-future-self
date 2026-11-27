@@ -1,19 +1,16 @@
-// Saves Coventry prayer times from namazvakitleri.com.tr to public/prayer-times.json.
-// Run by the GitHub Pages workflow once a day, because the live site cannot read namazvakitleri directly.
+// Saves Coventry prayer times to public/prayer-fallback.json. Runs before every deploy (npm run deploy).
+// The live site reads /prayer-times.json from the Worker; this file is only its backup if namazvakitleri fails.
+// A failed fetch keeps the old file and does not stop the deploy.
 import { writeFile, mkdir } from "node:fs/promises";
+import { parsePrayerPage, PRAYER_PAGE } from "../worker/prayer.js";
 
-const URL = "https://namazvakitleri.com.tr/en/city/3170/coventry-prayer-times";
-
-const res = await fetch(URL, { headers: { "User-Agent": "Mozilla/5.0 (MyFutureSelf prayer times)" } });
-if (!res.ok) throw new Error(`namazvakitleri answered ${res.status}`);
-const html = await res.text();
-const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-if (!m) throw new Error("Prayer page changed (no data block)");
-const rows = JSON.parse(m[1])?.props?.pageProps?.data?.PrayerTimes;
-if (!Array.isArray(rows) || rows.length < 7) throw new Error("Prayer page changed (no times)");
-
-const keep = ["date", "imsak", "gunes", "ogle", "ikindi", "aksam", "yatsi"];
-const clean = rows.map((r) => Object.fromEntries(keep.map((k) => [k, r[k]])));
-await mkdir("public", { recursive: true });
-await writeFile("public/prayer-times.json", JSON.stringify({ source: URL, saved: new Date().toISOString(), rows: clean }));
-console.log(`Saved ${clean.length} days (${clean[0].date} to ${clean[clean.length - 1].date})`);
+try {
+  const res = await fetch(PRAYER_PAGE, { headers: { "User-Agent": "Mozilla/5.0 (MyFutureSelf prayer times)" } });
+  if (!res.ok) throw new Error(`namazvakitleri answered ${res.status}`);
+  const rows = parsePrayerPage(await res.text());
+  await mkdir("public", { recursive: true });
+  await writeFile("public/prayer-fallback.json", JSON.stringify({ source: PRAYER_PAGE, saved: new Date().toISOString(), rows }));
+  console.log(`Saved ${rows.length} days (${rows[0].date} to ${rows.at(-1).date})`);
+} catch (e) {
+  console.warn(`Prayer fallback not updated: ${e.message}`);
+}

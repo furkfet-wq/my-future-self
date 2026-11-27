@@ -20,5 +20,5 @@
     }
   ],
   // The Google OAuth Client ID is public (no client secret is used).
-  "vars": { "GOOGLE_CLIENT_ID": "" }
+  "vars": { "GOOGLE_CLIENT_ID": "892050576996-skhemi4r09one5e22oqcceq2ouacm4bp.apps.googleusercontent.com" }
 }

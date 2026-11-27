@@ -10,11 +10,11 @@ const proxy = {
     rewrite: (path) => path.replace(/^\/namaz/, ""),
     headers: { "User-Agent": "Mozilla/5.0 (MyFutureSelf prayer times)" },
   },
+  // Login and saved data: run `npx wrangler dev` alongside `npm run dev`.
+  "/api": { target: "http://127.0.0.1:8787", changeOrigin: false },
 };
 
 export default defineConfig({
-  // GitHub Pages serves the app from /my-future-self/
-  base: process.env.GITHUB_PAGES ? "/my-future-self/" : "/",
   plugins: [react()],
   server: { port: 5173, open: false, proxy },
   preview: { proxy },

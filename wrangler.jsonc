@@ -1,0 +1,24 @@
+{
+  // My Future Self: one Worker serves the built app (dist/) and runs code only for /api/* and /prayer-times.json.
+  // Nothing here belongs to the Flame SMP store (that is the separate `flame-delivery` Worker).
+  "name": "my-future-self",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/prayer-times.json"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "my-future-self",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  // The Google OAuth Client ID is public (no client secret is used).
+  "vars": { "GOOGLE_CLIENT_ID": "" }
+}

@@ -15,7 +15,15 @@ export function parsePrayerPage(html) {
   return rows.map((r) => Object.fromEntries(KEEP.map((k) => [k, r[k]])));
 }
 
+// Kept in this Worker's memory too: the Cache API does nothing on *.workers.dev addresses.
+let memo = { body: null, until: 0 };
+const jsonResponse = (body) =>
+  withSecurityHeaders(
+    new Response(body, { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${CACHE_S}` } })
+  );
+
 export async function prayerTimes(request, env, ctx) {
+  if (memo.body && Date.now() < memo.until) return jsonResponse(memo.body);
   const cache = caches.default;
   const key = new Request(new URL("/prayer-times.json", request.url).toString());
   const hit = await cache.match(key);
@@ -25,11 +33,9 @@ export async function prayerTimes(request, env, ctx) {
     const res = await fetch(source, { headers: { "User-Agent": "Mozilla/5.0 (MyFutureSelf prayer times)" } });
     if (!res.ok) throw new Error(`namazvakitleri answered ${res.status}`);
     const rows = parsePrayerPage(await res.text());
-    const out = withSecurityHeaders(
-      new Response(JSON.stringify({ source: PRAYER_PAGE, saved: new Date().toISOString(), rows }), {
-        headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": `public, max-age=${CACHE_S}` },
-      })
-    );
+    const body = JSON.stringify({ source: PRAYER_PAGE, saved: new Date().toISOString(), rows });
+    memo = { body, until: Date.now() + CACHE_S * 1000 };
+    const out = jsonResponse(body);
     ctx?.waitUntil?.(cache.put(key, out.clone()));
     return out;
   } catch (e) {

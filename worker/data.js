@@ -1,7 +1,7 @@
 // Each account's saved document, with a version number so two devices can't silently overwrite each other.
 import { json } from "./http.js";
 import { clearCookie } from "./session.js";
-import { validateDoc } from "../shared/doc.js";
+import { validateDoc, cleanDoc } from "../shared/doc.js";
 
 export const MAX_BYTES = 1_000_000;
 
@@ -20,9 +20,11 @@ export async function putData(request, env, user) {
   } catch {
     return json({ error: "bad request" }, 400);
   }
-  const { data, version } = body || {};
+  const { data, version, user: claimed } = body || {};
   if (!Number.isInteger(version) || version < 0 || !validateDoc(data)) return json({ error: "bad request" }, 400);
-  const str = JSON.stringify(data);
+  // a tab still showing another account must never write into this one
+  if (claimed !== user.id) return json({ error: "wrong account" }, 403);
+  const str = JSON.stringify(cleanDoc(data));
   if (new TextEncoder().encode(str).length > MAX_BYTES) return json({ error: "too big" }, 413);
 
   const t = Math.floor(Date.now() / 1000);

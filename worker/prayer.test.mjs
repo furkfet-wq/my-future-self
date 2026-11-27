@@ -16,3 +16,23 @@ test("throws on a page without the data block", () => {
   assert.throws(() => parsePrayerPage("<html>nothing here</html>"));
   assert.throws(() => parsePrayerPage(page({ PrayerTimes: [] })));
 });
+
+test("namazvakitleri is fetched once per 6 hours even where the Cache API does nothing (workers.dev)", async () => {
+  const { prayerTimes } = await import("./prayer.js");
+  globalThis.caches = { default: { match: async () => undefined, put: async () => {} } };
+  let calls = 0;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    calls++;
+    return new Response(page({ PrayerTimes: [row("2026-11-27")] }));
+  };
+  try {
+    const env = { PRAYER_URL: "https://example.test/p" };
+    const a = await (await prayerTimes(new Request("https://app.test/prayer-times.json"), env)).json();
+    const b = await (await prayerTimes(new Request("https://app.test/prayer-times.json"), env)).json();
+    assert.equal(calls, 1);
+    assert.deepEqual(a.rows, b.rows);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

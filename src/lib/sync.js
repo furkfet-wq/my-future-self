@@ -1,9 +1,10 @@
-// Saves the signed-in person's data online: 2 s after the last change, again on leaving the page,
+// Saves the signed-in person's data online: 2 s after the last change, again when the tab is hidden or closed,
 // and picks up newer copies saved from another device when the tab comes back.
+// Every save carries the version this copy was based on, so it can never overwrite a newer online copy.
 import { useCallback, useEffect, useRef } from "react";
 import { getDoc, putDoc } from "./cloud.js";
-import { DIRTY_KEY } from "./startup.js";
-import { DOC_VERSION } from "../../shared/doc.js";
+import { DIRTY_KEY, VERSION_KEY } from "./startup.js";
+import { DOC_VERSION, cleanDoc, sameDoc } from "../../shared/doc.js";
 
 const SAVE_AFTER_MS = 2000;
 const RETRY_MS = 30000;
@@ -11,9 +12,10 @@ const KEEPALIVE_MAX = 60000; // browsers cap keepalive bodies at 64 KB
 
 const isDirty = () => localStorage.getItem(DIRTY_KEY) === "1";
 
-export function useCloudSave({ state, settings, startVersion, onRemote, offline = false }) {
+export function useCloudSave({ userId, state, settings, startVersion, onRemote, offline = false }) {
   const version = useRef(startVersion);
   const latest = useRef(null);
+  const pending = useRef(false); // this tab has a change that is not saved yet
   const timer = useRef(null);
   const busy = useRef(false);
   const first = useRef(true);
@@ -22,11 +24,19 @@ export function useCloudSave({ state, settings, startVersion, onRemote, offline 
   onRemoteRef.current = onRemote;
   latest.current = { v: DOC_VERSION, state, settings };
 
-  const takeRemote = useCallback((data, v) => {
+  const setVersion = (v) => {
     version.current = v;
+    localStorage.setItem(VERSION_KEY, String(v));
+  };
+
+  const takeRemote = useCallback((data, v) => {
+    setVersion(v);
+    pending.current = false;
     localStorage.removeItem(DIRTY_KEY);
+    const doc = cleanDoc(data);
+    if (!doc || sameDoc(doc, latest.current)) return; // nothing new (e.g. our own last save already arrived)
     skipNext.current = true;
-    onRemoteRef.current(data);
+    onRemoteRef.current(doc);
   }, []);
 
   const save = useCallback(async () => {
@@ -35,34 +45,38 @@ export function useCloudSave({ state, settings, startVersion, onRemote, offline 
       timer.current = setTimeout(save, SAVE_AFTER_MS);
       return;
     }
-    if (!isDirty()) return;
+    if (!pending.current && !isDirty()) return;
     busy.current = true;
     const sent = latest.current;
     try {
-      // started offline: learn the online version first (this device's changes then win)
-      if (version.current == null) version.current = (await getDoc()).version;
-      const r = await putDoc(sent, version.current);
+      const r = await putDoc(sent, version.current, userId);
       if (r.conflict) takeRemote(r.conflict.data, r.conflict.version);
       else {
-        version.current = r.version;
-        if (latest.current === sent) localStorage.removeItem(DIRTY_KEY);
+        setVersion(r.version);
+        if (latest.current.state === sent.state && latest.current.settings === sent.settings) {
+          pending.current = false;
+          localStorage.removeItem(DIRTY_KEY);
+        }
       }
-    } catch {
+    } catch (e) {
+      if (e.status === 403) return location.reload(); // another account signed in on this browser meanwhile
       timer.current = setTimeout(save, RETRY_MS); // offline or server trouble: try again later, the change stays in this browser
     } finally {
       busy.current = false;
     }
-  }, [takeRemote]);
+  }, [takeRemote, userId]);
 
   // every change: mark it unsaved and save shortly
   useEffect(() => {
     if (first.current) {
       first.current = false;
       if (!isDirty()) return;
+      pending.current = true;
     } else if (skipNext.current) {
       skipNext.current = false;
       return;
     } else {
+      pending.current = true;
       localStorage.setItem(DIRTY_KEY, "1");
     }
     clearTimeout(timer.current);
@@ -70,30 +84,34 @@ export function useCloudSave({ state, settings, startVersion, onRemote, offline 
   }, [state, settings, save, offline]);
 
   useEffect(() => {
-    const onVisible = async () => {
-      if (document.visibilityState !== "visible") return;
-      if (isDirty()) return save();
+    const onVisibility = async () => {
+      if (document.visibilityState === "hidden") {
+        if (pending.current) save(); // phones often close hidden tabs without warning
+        return;
+      }
+      if (pending.current || isDirty()) return save();
       try {
         const r = await getDoc();
-        if (r.data && r.version > version.current && !isDirty()) takeRemote(r.data, r.version);
+        if (r.data && r.version > version.current && !pending.current) takeRemote(r.data, r.version);
       } catch {
         /* offline: keep what we have */
       }
     };
     const onHide = () => {
-      if (!isDirty() || busy.current) return;
+      if (!pending.current || busy.current) return;
       const body = latest.current;
-      if (version.current != null && JSON.stringify(body).length < KEEPALIVE_MAX) putDoc(body, version.current, true).catch(() => {});
-      // the dirty flag stays: if this last save did not make it, it is sent on the next start
+      if (JSON.stringify(body).length < KEEPALIVE_MAX) putDoc(body, version.current, userId, true).catch(() => {});
+      // the dirty flag stays: on the next start the copy is sent again with its old version;
+      // if this save did arrive, that gives a conflict with identical data, which is taken silently
     };
-    document.addEventListener("visibilitychange", onVisible);
+    document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onHide);
     return () => {
-      document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", onHide);
       clearTimeout(timer.current);
     };
-  }, [save, takeRemote]);
+  }, [save, takeRemote, userId]);
 
   // used before signing out, so the last change is not lost
   return useCallback(async () => {

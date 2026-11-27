@@ -179,6 +179,7 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
   // Online saving for the signed-in account (see lib/sync.js)
   const [syncNote, setSyncNote] = useState(null);
   const flushSave = useCloudSave({
+    userId: user.id,
     state,
     settings,
     startVersion,

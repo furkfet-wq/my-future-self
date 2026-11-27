@@ -3,6 +3,8 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { PIN_LENGTH, setPin, checkPin, recordTry, waitLeftMs, resetEverything } from "../lib/lock.js";
 import { sfx } from "../lib/sound.js";
+import { logout } from "../lib/cloud.js";
+import { googleSignOut } from "./SignIn.jsx";
 
 const STEPS = {
   setup: ["new", "confirm"],
@@ -107,18 +109,21 @@ export default function Lock({ mode, onDone, onCancel }) {
         <div className="lk-box">
           <h1>Forgot your PIN?</h1>
           <p className="lk-sub">
-            The PIN cannot be recovered. The only way back in is to delete all of this app's data on this device: habits, salah,
-            daily actions and settings. This cannot be undone.
+            The PIN cannot be recovered. Resetting removes the PIN and this app's data from this device and signs you out. Sign
+            in again with Google to get your saved data back.
           </p>
           <div className="lk-row">
             <button
               className="lk-danger"
-              onClick={() => {
+              onClick={async () => {
+                // also sign out: otherwise the saved data would just load again and the PIN would protect nothing
                 resetEverything();
+                await logout().catch(() => {});
+                googleSignOut();
                 window.location.reload();
               }}
             >
-              Delete everything
+              Reset and sign out
             </button>
             <button className="lk-link" onClick={() => setForgot(false)}>
               Cancel

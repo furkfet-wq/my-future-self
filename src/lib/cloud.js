@@ -25,5 +25,6 @@ export const login = async (credential) => (await call("/api/login", { method: "
 export const logout = () => call("/api/logout", { method: "POST" });
 export const deleteAccount = () => call("/api/account", { method: "DELETE" });
 export const getDoc = () => call("/api/data");
-// -> { version } or { conflict: { data, version } } when another device saved first
-export const putDoc = (data, version, keepalive = false) => call("/api/data", { method: "PUT", body: { data, version }, keepalive });
+// -> { version } or { conflict: { data, version } } when another device saved first.
+// `user` is the account this copy belongs to; the server refuses it (403) if that is not the signed-in account.
+export const putDoc = (data, version, user, keepalive = false) => call("/api/data", { method: "PUT", body: { data, version, user }, keepalive });

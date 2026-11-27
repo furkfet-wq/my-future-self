@@ -37,7 +37,7 @@ How it fits together: one Cloudflare Worker (`worker/`) serves the built app fro
 
 ## PIN lock
 
-Optional and off by default. Turn it on in Settings to choose a 10-digit PIN; after that the app asks for it every time it opens on that device. The PIN is never stored: only a salted PBKDF2-SHA-256 hash of it, in your own browser. After 5 wrong tries the app makes you wait (30 s, then longer). "Forgot PIN?" removes the app's data from that browser; your saved data comes back from your account when you sign in again. You can change it or turn it off in Settings.
+Optional and off by default. Turn it on in Settings to choose a 10-digit PIN; after that the app asks for it every time it opens on that device. The PIN is never stored: only a salted PBKDF2-SHA-256 hash of it, in your own browser. After 5 wrong tries the app makes you wait (30 s, then longer). "Forgot PIN?" removes the PIN and the app's data from that browser and signs you out; sign in again with Google to get your saved data back. You can change it or turn it off in Settings.
 
 ## Privacy
 

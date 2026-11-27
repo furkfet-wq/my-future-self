@@ -56,3 +56,21 @@ test("unowned import keeps no owner tag", () => {
   writeLocalDoc(remote, null);
   assert.equal(localStorage.getItem(OWNER_KEY), null);
 });
+
+// ---- final review fixes ----
+test("own copy of an account deleted on another device starts fresh", () => {
+  assert.equal(d({ localOwner: "A", localState: full, localVersion: 3 }), "fresh");
+  assert.equal(d({ localOwner: "A", localState: full, localVersion: 0 }), "upload"); // never saved online yet
+});
+test("the saved version travels with the local copy", async () => {
+  const { VERSION_KEY, localVersion } = await import("./startup.js");
+  writeLocalDoc(remote, "A", 4);
+  assert.equal(localStorage.getItem(VERSION_KEY), "4");
+  assert.equal(localVersion(), 4);
+  clearLocal();
+  assert.equal(localVersion(), 0);
+});
+test("readLocalDoc cleans broken entries", () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...full, logs: { "2026-11-01": null } }));
+  assert.deepEqual(readLocalDoc().state.logs, {});
+});

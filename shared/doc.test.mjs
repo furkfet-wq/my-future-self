@@ -120,7 +120,7 @@ test("alarms are cleaned", () => {
 });
 
 test("place is kept only when it is valid", () => {
-  const place = { name: "Istanbul", region: "Istanbul", country: "Türkiye", lat: 41.01, lon: 28.98, cityId: 5041 };
+  const place = { name: "Istanbul", region: "Istanbul", country: "Türkiye", lat: 41.01, lon: 28.98, cityId: 5041, km: 3 };
   assert.deepEqual(cleanDoc({ ...good(), settings: { place } }).settings.place, place);
   assert.equal(cleanDoc({ ...good(), settings: { place: { ...place, lat: 200 } } }).settings.place, undefined);
   assert.equal(cleanDoc({ ...good(), settings: { place: { ...place, cityId: "5041" } } }).settings.place, undefined);

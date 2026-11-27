@@ -1,3 +1,4 @@
+import PlacePicker from "./PlacePicker.jsx";
 import { useEffect, useRef, useState } from "react";
 import HabitGrid from "./HabitGrid.jsx";
 import { dateKey } from "../lib/dates.js";
@@ -35,7 +36,9 @@ const DISMISS_KEY = "mfs-alarm-dismissed";
 const hhmm = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
 /* Prayer times: today's times and live countdowns (hours, minutes, seconds). */
-export function PrayerTimesCard({ state, prayer, alarmOn = true }) {
+export function PrayerTimesCard({ state, prayer, alarmOn = true, place = null, onPlace }) {
+  const [picking, setPicking] = useState(false);
+  const cityName = prayer.city || (place ? place.name : "Coventry");
   const now = useNow();
   const todayKey = dateKey(now);
   const days = prayer.days;
@@ -65,12 +68,30 @@ export function PrayerTimesCard({ state, prayer, alarmOn = true }) {
     <section className="card" id="prayer-times">
       <h2>
         Prayer times
-        <small>Coventry, live from namazvakitleri.com.tr</small>
+        <small>
+          Times for {cityName}
+          {place?.km > 30 ? ` (nearest city, ${place.km} km away)` : ""}, from namazvakitleri.com.tr
+        </small>
       </h2>
+      {onPlace && (
+        <button className="pp-change" onClick={() => setPicking(true)}>
+          Change
+        </button>
+      )}
+      {picking && (
+        <PlacePicker
+          place={place}
+          onClose={() => setPicking(false)}
+          onPick={(p) => {
+            setPicking(false);
+            onPlace(p);
+          }}
+        />
+      )}
 
       {!days && !prayer.error && <p className="sl-wait">Loading today's prayer times…</p>}
       {!days && prayer.error && (
-        <p className="sl-wait">Could not load prayer times ({prayer.error}). Make sure the app runs with npm run dev and you are online.</p>
+        <p className="sl-wait">Could not load prayer times right now. Check your internet; they will load when you are back online.</p>
       )}
 
       {today && (

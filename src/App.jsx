@@ -199,12 +199,15 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
   const G = (gid) => ({ gid, onHide: hideGraph });
 
   // Live prayer times (refreshed every 30 minutes, saved copy used when offline)
-  const [prayer, setPrayer] = useState({ days: null, error: null });
+  const [prayer, setPrayer] = useState({ days: null, error: null, city: null });
+  const place = settings.place || null;
+  const placeId = place?.cityId || 0;
   useEffect(() => {
     let live = true;
+    setPrayer({ days: null, error: null, city: null }); // a new place: never show the old place's times
     const load = () =>
-      loadPrayerTimes()
-        .then((r) => live && setPrayer({ days: r.days, error: r.error || null }))
+      loadPrayerTimes({ place: placeId ? place : null })
+        .then((r) => live && setPrayer({ days: r.days, error: r.error || null, city: r.city || null }))
         .catch((e) => live && setPrayer((p) => ({ ...p, error: e.message })));
     load();
     const id = setInterval(load, 30 * 60 * 1000);
@@ -212,7 +215,8 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
       live = false;
       clearInterval(id);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the chosen city changes
+  }, [placeId]);
 
   const stats = useMemo(() => computeStats(state, year, month0), [state, year, month0]);
   // Salah charts reuse the same month stats, with the prayers as the "habits" and salah ticks as the checks.
@@ -430,7 +434,18 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
           />
         </Card>
 
-        {settings.prayerTimes && <PrayerTimesCard state={state} prayer={prayer} alarmOn={settings.alarm} />}
+        {settings.prayerTimes && (
+          <PrayerTimesCard
+            state={state}
+            prayer={prayer}
+            alarmOn={settings.alarm}
+            place={place}
+            onPlace={(p) => {
+              const { place: _old, ...rest } = settings;
+              changeSettings(p ? { ...rest, place: p } : rest);
+            }}
+          />
+        )}
 
         {settings.salahTable && <SalahCard
           state={state}

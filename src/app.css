@@ -541,3 +541,22 @@ button.ad-tr:hover { background: var(--soft); translate: 0 -2px; }
 .hg-name.drop { outline: 2px dashed var(--fg); outline-offset: 2px; }
 .hg-rename { width: 100%; min-width: 0; font: inherit; font-weight: 600; font-size: 14px; color: var(--fg); background: transparent;
   border: 0; border-bottom: 1px solid var(--fg); outline: none; padding: 2px 0; }
+
+/* Prayer times location picker */
+#prayer-times { position: relative; }
+.pp-change { position: absolute; top: 18px; right: 18px; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 800;
+  border: var(--stroke) solid var(--line); transition: border-color 0.3s, translate 0.6s var(--rise); }
+.pp-change:hover { border-color: var(--fg); translate: 0 -2px; }
+.pp-now { margin: 0 0 10px; font-size: 13px; color: var(--dim); }
+.pp-input { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: var(--stroke) solid var(--line);
+  background: var(--bg); color: var(--fg); font: inherit; font-size: 16px; }
+.pp-input:focus { outline: none; border-color: var(--fg); }
+.pp-list { display: grid; gap: 4px; margin-top: 8px; max-height: 260px; overflow: auto; }
+.pp-item { text-align: left; padding: 10px 12px; border-radius: 10px; font-size: 14px; transition: background 0.2s, translate 0.5s var(--rise); }
+.pp-item:hover:not(:disabled) { background: var(--soft); translate: 0 -2px; }
+.pp-msg { margin: 8px 0 0; font-size: 13px; color: #ff6a6a; }
+.pp-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pp-btn { padding: 9px 16px; border-radius: 999px; border: var(--stroke) solid var(--fg); font-weight: 700; font-size: 13px;
+  transition: background 0.2s, color 0.2s, translate 0.6s var(--rise); }
+.pp-btn:hover:not(:disabled) { background: var(--fg); color: var(--bg); translate: 0 -2px; }
+.pp-note { margin: 12px 0 0; font-size: 11px; color: var(--dim); }

@@ -9,7 +9,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import http from "node:http";
 import { readFileSync } from "node:fs";
-import { W, startWorker, stopWorker, googleToken } from "./harness.mjs";
+import { W, startWorker, stopWorker, googleToken, FAKE_TIMES } from "./harness.mjs";
 import { cleanDoc } from "../shared/doc.js";
 
 const extDir = join(homedir(), ".vscode", "extensions");
@@ -275,4 +275,39 @@ test("a deleted account's data does not come back from another device", async ()
   assert.equal(checksCount(await local(pa)), 0);
   await a.close();
   await b.close();
+});
+
+// ---- prayer location ----
+const GEO = { results: [{ name: "Istanbul", admin1: "Istanbul", country: "Türkiye", latitude: 41.01384, longitude: 28.94966 }] };
+
+test("picking a place changes the prayer times", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await page.route(/geocoding-api\.open-meteo\.com/, (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify(GEO) }));
+  await signInAs(page, "p1");
+  const card = page.locator("#prayer-times");
+  await card.getByRole("button", { name: "Change" }).click();
+  await page.getByPlaceholder("Search a town or city").fill("Ista");
+  await page.getByRole("button", { name: /Istanbul, Istanbul, Türkiye/ }).click();
+  await card.getByText("İstanbul").first().waitFor({ timeout: 10000 });
+  await card.getByText(FAKE_TIMES.ogle).first().waitFor();
+  await page.waitForTimeout(3000);
+  const place = (await serverDoc(ctx)).data.settings.place;
+  assert.equal(place.cityId, 5041);
+  assert.equal(place.name, "Istanbul");
+  await ctx.close();
+});
+
+test("search failure keeps the place", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await page.route(/geocoding-api\.open-meteo\.com/, (r) => r.abort());
+  await signInAs(page, "p2");
+  const card = page.locator("#prayer-times");
+  await card.getByRole("button", { name: "Change" }).click();
+  await page.getByPlaceholder("Search a town or city").fill("Ista");
+  await page.getByText("Could not search right now").waitFor({ timeout: 10000 });
+  await page.keyboard.press("Escape");
+  await card.getByText("Coventry").first().waitFor();
+  await ctx.close();
 });

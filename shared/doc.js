@@ -86,7 +86,8 @@ function cleanPlace(p) {
   const lon = p.lon;
   if (typeof lat !== "number" || typeof lon !== "number" || !(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) return undefined;
   const str = (x) => (typeof x === "string" ? x.slice(0, 80) : "");
-  return { name: str(p.name), region: str(p.region), country: str(p.country), lat, lon, cityId: p.cityId };
+  const km = Number.isInteger(p.km) && p.km >= 0 && p.km <= 20000 ? p.km : 0;
+  return { name: str(p.name), region: str(p.region), country: str(p.country), lat, lon, cityId: p.cityId, km };
 }
 
 function cleanTicks(days) {

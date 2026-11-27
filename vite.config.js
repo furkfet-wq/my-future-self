@@ -12,6 +12,7 @@ const proxy = {
   },
   // Login and saved data: run `npx wrangler dev` alongside `npm run dev`.
   "/api": { target: "http://127.0.0.1:8787", changeOrigin: false },
+  "/prayer-times.json": { target: "http://127.0.0.1:8787", changeOrigin: false },
 };
 
 export default defineConfig({

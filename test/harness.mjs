@@ -8,6 +8,20 @@ export const W = "http://127.0.0.1:8787";
 const CLIENT_ID = "test-client";
 let wrangler;
 let keyServer;
+let nvServer;
+
+// fake namazvakitleri city page: same shape as the real one, times for the next 40 days
+export const FAKE_TIMES = { imsak: "06:28", gunes: "07:58", ogle: "12:57", ikindi: "15:23", aksam: "17:45", yatsi: "19:10" };
+function fakeCityPage(id) {
+  const rows = [];
+  for (let i = -2; i < 40; i++) {
+    const d = new Date(Date.now() + i * 86400000);
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    rows.push({ date, ...FAKE_TIMES });
+  }
+  const city = { id: Number(id), name: id === "5041" ? "İstanbul" : `City ${id}`, country: { name: "Türkiye" } };
+  return `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ props: { pageProps: { city, data: { PrayerTimes: rows } } } })}</script>`;
+}
 
 // ---- fake Google: one RSA key, served as JWKS, used to sign test ID tokens ----
 const KID = "test-kid";
@@ -50,12 +64,18 @@ export async function startWorker() {
     r.end(JSON.stringify({ keys: [jwk] }));
   });
   await new Promise((ok) => keyServer.listen(8790, "127.0.0.1", ok));
+  nvServer = http.createServer((q, r) => {
+    const m = /\/city\/(\d+)\//.exec(q.url);
+    r.setHeader("content-type", "text/html");
+    r.end(m ? fakeCityPage(m[1]) : "");
+  });
+  await new Promise((ok) => nvServer.listen(8792, "127.0.0.1", ok));
   rmSync(".wrangler/state", { recursive: true, force: true });
   execSync("npx wrangler d1 execute my-future-self --local --file worker/schema.sql", { stdio: "ignore" });
   wrangler = spawn(
     process.execPath,
     ["node_modules/wrangler/bin/wrangler.js", "dev", "--local", "--port", "8787", "--ip", "127.0.0.1", "--show-interactive-dev-session=false",
-      "--var", `GOOGLE_CLIENT_ID:${CLIENT_ID}`, "--var", "JWKS_URL:http://127.0.0.1:8790/certs", "--var", "PRAYER_URL:http://127.0.0.1:9/", "--var", "TEST_MODE:1"],
+      "--var", `GOOGLE_CLIENT_ID:${CLIENT_ID}`, "--var", "JWKS_URL:http://127.0.0.1:8790/certs", "--var", "PRAYER_URL:http://127.0.0.1:9/", "--var", "TEST_MODE:1", "--var", "PRAYER_BASE:http://127.0.0.1:8792"],
     { stdio: "ignore" }
   );
   for (let i = 0; i < 120; i++) {
@@ -71,6 +91,7 @@ export async function startWorker() {
 
 export function stopWorker() {
   keyServer?.close();
+  nvServer?.close();
   if (wrangler) {
     try {
       if (process.platform === "win32") execSync(`taskkill /pid ${wrangler.pid} /t /f`, { stdio: "ignore" });

@@ -1,6 +1,8 @@
 import { dateKey } from "./dates.js";
 
-/* Prayer times for Coventry, read live from namazvakitleri.com.tr.
+/* Prayer times from namazvakitleri.com.tr: Coventry by default, or the namazvakitleri city nearest to the
+   place chosen on the Prayer times card (the Worker answers /prayer-times.json?city=<id>).
+   For Coventry in local development: read live from namazvakitleri.com.tr.
    The site does not allow other websites to read it, so the app asks its own dev server,
    which forwards to the site (see vite.config.js, path /namaz). The page carries ~38 days of
    times as JSON (fields: imsak = Fajr, gunes = Sunrise, ogle = Dhuhr, ikindi = Asr,
@@ -46,35 +48,40 @@ function parseRows(rows) {
   return days;
 }
 
-function readCache() {
+function readCache(key = CACHE) {
   try {
-    return JSON.parse(localStorage.getItem(CACHE) || "null");
+    return JSON.parse(localStorage.getItem(key) || "null");
   } catch {
     return null;
   }
 }
 
-export async function loadPrayerTimes({ force = false } = {}) {
-  const cached = readCache();
+// place: the chosen place ({cityId, ...}) or null for Coventry. Each place has its own saved copy.
+export async function loadPrayerTimes({ force = false, place = null } = {}) {
+  const cacheKey = place ? `${CACHE}:${place.cityId}` : CACHE;
+  const cached = readCache(cacheKey);
   const today = dateKey(new Date());
-  if (!force && cached?.days?.[today] && Date.now() - cached.at < REFRESH_MS) return { days: cached.days, at: cached.at, fresh: false };
+  if (!force && cached?.days?.[today] && Date.now() - cached.at < REFRESH_MS) return { days: cached.days, at: cached.at, city: cached.city || null, fresh: false };
   try {
-    const live = !ENV.DEV && ENV.PROD;
-    const res = await fetch(live ? `${STATIC_FILE}?d=${today}` : PAGE, { headers: { Accept: live ? "application/json" : "text/html" } });
+    const live = (!ENV.DEV && ENV.PROD) || !!place;
+    const url = place ? `${STATIC_FILE}?city=${place.cityId}` : live ? `${STATIC_FILE}?d=${today}` : PAGE;
+    const res = await fetch(url, { headers: { Accept: live ? "application/json" : "text/html" } });
     if (!res.ok) throw new Error(`Prayer site answered ${res.status}`);
     // keep last week's saved days (offline fallback) plus the fresh ones; older days are dropped
     const keepFrom = shift(today, -7);
     const old = Object.fromEntries(Object.entries(cached?.days || {}).filter(([k]) => k >= keepFrom));
-    const days = { ...old, ...(live ? parseRows((await res.json()).rows) : parsePage(await res.text())) };
+    const body = live ? await res.json() : null;
+    const days = { ...old, ...(live ? parseRows(body.rows) : parsePage(await res.text())) };
+    const city = body?.city?.name || null;
     const at = Date.now();
     try {
-      localStorage.setItem(CACHE, JSON.stringify({ at, days }));
+      localStorage.setItem(cacheKey, JSON.stringify({ at, days, city }));
     } catch {
       /* ignore */
     }
-    return { days, at, fresh: true };
+    return { days, at, city, fresh: true };
   } catch (e) {
-    if (cached?.days?.[today]) return { days: cached.days, at: cached.at, fresh: false, error: e.message };
+    if (cached?.days?.[today]) return { days: cached.days, at: cached.at, city: cached.city || null, fresh: false, error: e.message };
     throw e;
   }
 }

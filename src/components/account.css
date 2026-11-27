@@ -23,7 +23,8 @@
 .acc-msg { margin: 6px; font-size: 12px; color: #ff6a6a; }
 
 /* Sign-in screen pieces (the screen itself reuses the PIN screen's .lk styles) */
-.si-btn { min-height: 44px; display: grid; place-items: center; margin: 8px 0 2px; }
+/* color-scheme light: Google's button frame is light, and a dark page would paint a white box behind it */
+.si-btn { min-height: 44px; display: grid; place-items: center; margin: 8px 0 2px; color-scheme: light; }
 .ask-row { display: grid; gap: 10px; width: 100%; margin-top: 8px; }
 .ask-btn { padding: 12px 16px; border-radius: 999px; border: var(--stroke) solid var(--fg); font-weight: 800;
   transition: background 0.2s, color 0.2s, translate 0.6s var(--rise); }

@@ -16,7 +16,7 @@
     {
       "binding": "DB",
       "database_name": "my-future-self",
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "430afde8-5641-4e76-b6dc-7972cd2f9a28"
     }
   ],
   // The Google OAuth Client ID is public (no client secret is used).

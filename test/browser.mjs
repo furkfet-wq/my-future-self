@@ -102,7 +102,7 @@ test("old browser data is uploaded on the first sign-in", async () => {
 
   // sign out: this browser's copy is cleared, and the next account starts empty
   await page.click(".acc-btn");
-  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
   await page.locator("#fake-google").waitFor();
   assert.equal(await local(page), null);
   await signInAs(page, "b4");
@@ -220,7 +220,7 @@ test("signing in to another account in one tab reloads the other tabs", async ()
   const p2 = await open(ctx);
   await p2.locator("main.app").waitFor({ timeout: 20000 });
   await p2.click(".acc-btn");
-  await p2.getByRole("menuitem", { name: "Sign out" }).click();
+  await p2.getByRole("menuitem", { name: "Sign out", exact: true }).click();
   await signInAs(p2, "c3");
   await p1.waitForFunction(() => window.__stale === undefined, null, { timeout: 10000 });
   await ctx.close();

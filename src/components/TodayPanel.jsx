@@ -19,7 +19,7 @@ function useNow() {
 
 const pad = (n) => String(n).padStart(2, "0");
 
-export default function TodayPanel({ state, balance, onOpenToday, muslim = true }) {
+export default function TodayPanel({ state, balance, onOpenToday, muslim = true, tools = null }) {
   const now = useNow();
   const key = dateKey(now);
   const s = useMemo(() => dayStats(state, key), [state, key]);
@@ -32,6 +32,7 @@ export default function TodayPanel({ state, balance, onOpenToday, muslim = true 
   return (
     <section className="tp" aria-label="Today">
       <div className="tp-clock">
+        {tools && <div className="tp-tools">{tools}</div>}
         <div className="tp-time">
           {pad(now.getHours())}:{pad(now.getMinutes())}
           <small>{pad(now.getSeconds())}</small>

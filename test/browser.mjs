@@ -349,3 +349,90 @@ test("Muslim mode off hides every Islamic part and on brings it back", async () 
   for (const [k, l] of Object.entries(islamic)) assert.ok((await l.count()) > 0, `${k} back when on`);
   await ctx.close();
 });
+
+// ---- Clock ----
+async function openClock(page) {
+  await page.locator(".clk-btn").click();
+  await page.getByRole("dialog", { name: "Clock" }).waitFor();
+}
+
+test("clock button opens the full-screen clock with three tabs", async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 760 } });
+  const page = await open(ctx);
+  await signInAs(page, "k1");
+  await openClock(page);
+  const box = await page.getByRole("dialog", { name: "Clock" }).boundingBox();
+  assert.ok(box.width >= 1270 && box.height >= 750, "full screen");
+  for (const name of ["Alarms", "Timer", "Stopwatch"]) await page.getByRole("tab", { name }).waitFor();
+  await page.getByRole("button", { name: "Close clock" }).click();
+  assert.equal(await page.getByRole("dialog", { name: "Clock" }).count(), 0);
+  await ctx.close();
+});
+
+test("an alarm rings at its time and Stop silences it", async () => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  const t = new Date();
+  t.setHours(6, 59, 30, 0);
+  await page.clock.install({ time: t });
+  await page.route("https://accounts.google.com/gsi/client", (r) => r.fulfill({ contentType: "text/javascript", body: FAKE_GIS }));
+  await page.route(/api\.alquran\.cloud|quotable|fonts\.(googleapis|gstatic)/, (r) => r.abort());
+  await page.goto(W);
+  await signInAs(page, "k2");
+  await openClock(page);
+  await page.getByRole("button", { name: "Add alarm" }).click();
+  await page.getByLabel("Alarm time").fill("07:00");
+  await page.getByLabel("Alarm name").fill("Gym");
+  await page.getByRole("button", { name: "Save alarm" }).click();
+  await page.getByText("Rings in less than a minute").first().waitFor();
+  await page.getByRole("button", { name: "Close clock" }).click();
+  await page.clock.fastForward(45000);
+  await page.getByRole("alertdialog", { name: "Alarm" }).waitFor({ timeout: 10000 });
+  await page.getByRole("alertdialog").getByText("Gym").waitFor();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Stop" }).click();
+  assert.equal(await page.getByRole("alertdialog").count(), 0);
+  await openClock(page);
+  assert.equal(await page.getByRole("switch", { name: /Gym/ }).getAttribute("aria-checked"), "false", "a once-only alarm turns itself off");
+  await ctx.close();
+});
+
+test("own timer of 1 min 30 s rings at the end", async () => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.clock.install({ time: new Date() });
+  await page.route("https://accounts.google.com/gsi/client", (r) => r.fulfill({ contentType: "text/javascript", body: FAKE_GIS }));
+  await page.route(/api\.alquran\.cloud|quotable|fonts\.(googleapis|gstatic)/, (r) => r.abort());
+  await page.goto(W);
+  await signInAs(page, "k3");
+  await openClock(page);
+  await page.getByRole("tab", { name: "Timer" }).click();
+  const dlg = page.getByRole("dialog", { name: "Clock" });
+  await dlg.getByLabel("Minutes").fill("1");
+  await dlg.getByLabel("Seconds").fill("30");
+  await dlg.getByRole("button", { name: "Start" }).click();
+  await page.getByText("01:30").first().waitFor();
+  await page.clock.fastForward(92000);
+  await page.getByRole("alertdialog", { name: "Time's up" }).waitFor({ timeout: 10000 });
+  await page.getByRole("alertdialog").getByRole("button", { name: "Stop" }).click();
+  await ctx.close();
+});
+
+test("stopwatch counts and records laps", async () => {
+  const ctx = await browser.newContext();
+  const page = await open(ctx);
+  await signInAs(page, "k4");
+  await openClock(page);
+  await page.getByRole("tab", { name: "Stopwatch" }).click();
+  const dlg = page.getByRole("dialog", { name: "Clock" });
+  await dlg.getByRole("button", { name: "Start" }).click();
+  await page.waitForTimeout(1200);
+  await dlg.getByRole("button", { name: "Lap" }).click();
+  await page.waitForTimeout(600);
+  await dlg.getByRole("button", { name: "Stop" }).click();
+  const shown = await page.locator(".sw-time").textContent();
+  assert.notEqual(shown.trim(), "00:00.00");
+  assert.equal(await page.locator(".sw-laps li").count(), 1);
+  await dlg.getByRole("button", { name: "Reset" }).click();
+  assert.equal((await page.locator(".sw-time").textContent()).trim(), "00:00.00");
+  await ctx.close();
+});

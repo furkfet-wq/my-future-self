@@ -29,6 +29,9 @@ import Lock from "./components/Lock.jsx";
 import { hasPin, clearPin } from "./lib/lock.js";
 import { weekData, shiftKey, parseKey, dayStats, streak as perfectStreak, salahStreak } from "./lib/week.js";
 import { useCloudSave } from "./lib/sync.js";
+import { ClockButton, ClockPanel, Ringer } from "./components/Clock.jsx";
+import { dueAlarms } from "./lib/clock.js";
+import { alarmStart, alarmStop } from "./lib/sound.js";
 import Account from "./components/Account.jsx";
 import "./components/account.css";
 
@@ -73,6 +76,26 @@ function Impact({ x, y, onDone }) {
       <div className="im-glow" style={{ left: x, top: y }} />
     </div>
   );
+}
+
+// State kept only in this browser (timer, stopwatch, snooze).
+function useLocal(key, init) {
+  const [v, setV] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(key) || "null") ?? init;
+    } catch {
+      return init;
+    }
+  });
+  const set = (x) => {
+    setV(x);
+    try {
+      localStorage.setItem(key, JSON.stringify(x));
+    } catch {
+      /* storage full: keep it in memory */
+    }
+  };
+  return [v, set];
 }
 
 function SoundToggle() {
@@ -277,6 +300,43 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
   }
   const balance = useMemo(() => totalBalance(state), [state]);
 
+  // Clock: alarms (saved with the account), timer + stopwatch + snooze (this device), checked every second.
+  const [clockOpen, setClockOpen] = useState(false);
+  const [timer, setTimer] = useLocal("mfs-timer-v1", { endsAt: null, pausedLeft: null, total: 0 });
+  const [sw, setSw] = useLocal("mfs-stopwatch-v1", { startedAt: null, banked: 0, laps: [] });
+  const [snooze, setSnooze] = useLocal("mfs-snooze-v1", null); // { at, label }
+  const [ring, setRing] = useState(null); // { kind: "alarm" | "timer", label }
+  const live = useRef({});
+  live.current = { alarms: state.alarms || [], timer, snooze, setAlarms: actions.setAlarms, setTimer, setSnooze };
+  useEffect(() => {
+    let last = new Date();
+    const id = setInterval(() => {
+      const now = new Date();
+      const L = live.current;
+      const due = dueAlarms(L.alarms, last, now); // also catches minutes missed while the tab slept
+      last = now;
+      if (due.length) {
+        setRing({ kind: "alarm", label: due.map((a) => a.label).filter(Boolean).join(", ") });
+        const once = new Set(due.filter((a) => !a.days.length).map((a) => a.id));
+        if (once.size) L.setAlarms(L.alarms.map((a) => (once.has(a.id) ? { ...a, on: false } : a)));
+      }
+      if (L.timer.endsAt != null && now.getTime() >= L.timer.endsAt) {
+        L.setTimer({ endsAt: null, pausedLeft: null, total: 0 });
+        setRing({ kind: "timer", label: "" });
+      }
+      if (L.snooze && now.getTime() >= L.snooze.at) {
+        L.setSnooze(null);
+        setRing({ kind: "alarm", label: L.snooze.label });
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (!ring) return undefined;
+    alarmStart();
+    return () => alarmStop();
+  }, [ring]);
+
   function shiftMonth(delta) {
     const d = new Date(year, month0 + delta, 1);
     setYear(d.getFullYear());
@@ -327,6 +387,27 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
         />
       )}
       <SyncToast note={syncNote} />
+      {clockOpen && (
+        <ClockPanel
+          alarms={state.alarms || []}
+          onAlarms={actions.setAlarms}
+          timer={timer}
+          setTimer={setTimer}
+          sw={sw}
+          setSw={setSw}
+          onClose={() => setClockOpen(false)}
+        />
+      )}
+      {ring && (
+        <Ringer
+          ring={ring}
+          onStop={() => setRing(null)}
+          onSnooze={() => {
+            setSnooze({ at: Date.now() + 5 * 60000, label: ring.label });
+            setRing(null);
+          }}
+        />
+      )}
       <SoundToggle />
       <ScreenHit />
       {settingsOpen && (
@@ -402,7 +483,13 @@ export default function App({ user, startVersion, onSignOut, onDeleteAccount }) 
       <main className="app">
         <Hero streak={heldStreak?.h ?? streakDays} salahStreak={heldStreak?.s ?? salahDays} pulse={pulse.h} salahPulse={pulse.s} showVerse={settings.verse} showQuote={settings.quote} muslim={muslim} />
 
-        <TodayPanel state={state} balance={balance} onOpenToday={() => goToDay(dateKey(new Date()), true)} muslim={muslim} />
+        <TodayPanel
+          state={state}
+          balance={balance}
+          onOpenToday={() => goToDay(dateKey(new Date()), true)}
+          muslim={muslim}
+          tools={<ClockButton onClick={() => setClockOpen(true)} />}
+        />
 
         <Header
           year={year}

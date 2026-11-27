@@ -1,0 +1,98 @@
+/* Round tool buttons above the time on the Today card (clock, notepad) */
+.tp-tools { display: flex; gap: 10px; margin-bottom: 10px; }
+.tool-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: var(--stroke) solid var(--line);
+  color: var(--fg); background: var(--bg); transition: border-color 0.3s, translate 0.6s var(--rise), box-shadow 0.6s ease; }
+.tool-btn svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.tool-btn:hover { border-color: var(--fg); translate: 0 -3px; box-shadow: 0 8px 20px rgba(255, 255, 255, 0.08); }
+.clk-btn .clk-h, .clk-btn .clk-m { transform-origin: 12px 13px; transition: rotate 1.2s var(--rise); }
+.clk-btn:hover .clk-m { rotate: 360deg; }
+.clk-btn:hover .clk-h { rotate: 30deg; }
+.clk-btn.wobble svg { animation: clk-wobble 0.6s ease; }
+@keyframes clk-wobble { 0%, 100% { rotate: 0deg; } 20% { rotate: -14deg; } 40% { rotate: 12deg; } 60% { rotate: -8deg; } 80% { rotate: 4deg; } }
+@media (prefers-reduced-motion: reduce) { .clk-btn.wobble svg { animation: none; } .clk-btn:hover .clk-m, .clk-btn:hover .clk-h { rotate: none; } }
+
+/* Full-screen clock */
+.clk { position: fixed; inset: 0; z-index: 150; background: var(--bg); display: flex; flex-direction: column; align-items: center;
+  padding: 18px 18px 40px; overflow: auto; animation: clk-in 0.45s var(--rise); }
+@keyframes clk-in { from { opacity: 0; translate: 0 14px; } }
+.clk-top { width: min(760px, 100%); display: flex; justify-content: space-between; align-items: center; }
+.clk-now { font-size: 15px; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
+.clk-close { width: 40px; height: 40px; }
+.clk-tabs { display: flex; gap: 6px; padding: 5px; margin: 18px 0 26px; border: var(--stroke) solid var(--line); border-radius: 999px; }
+.clk-tabs button { padding: 9px 22px; border-radius: 999px; font-weight: 800; font-size: 14px; color: var(--dim); transition: background 0.25s, color 0.25s; }
+.clk-tabs button:hover { color: var(--fg); }
+.clk-tabs button.on { background: var(--fg); color: var(--bg); }
+.clk-body { width: min(560px, 100%); }
+.clk-row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.clk-btnlike, .clk .clk-row button, .clk .al-actions button, .clk .al-add, .clk .tm-quick button, .clk .al-days button, .rng button {
+  padding: 11px 22px; border-radius: 999px; font-weight: 800; border: var(--stroke) solid var(--line); color: var(--fg);
+  transition: background 0.2s, color 0.2s, border-color 0.2s, translate 0.6s var(--rise); }
+.clk .clk-row button:not(:disabled):hover, .clk .al-actions button:hover, .clk .al-add:hover, .clk .tm-quick button:hover,
+.clk .al-days button:hover, .rng button:hover { translate: 0 -2px; border-color: var(--fg); }
+.clk .clk-primary, .rng .clk-primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.clk-big { min-width: 150px; font-size: 17px; }
+.clk button:disabled { opacity: 0.35; cursor: default; }
+.clk .clk-danger { color: #ff6a6a; }
+.clk-note { margin: 18px 0 0; font-size: 12px; color: var(--dim); text-align: center; }
+
+/* Alarms */
+.al-next { text-align: center; font-size: 15px; font-weight: 700; margin: 0 0 14px; }
+.al-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.al-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: var(--stroke) solid var(--line); border-radius: 16px;
+  transition: border-color 0.3s, translate 0.6s var(--rise); }
+.al-list li:hover { border-color: var(--fg); translate: 0 -2px; }
+.al-list li.off { opacity: 0.5; }
+.al-main { flex: 1; display: grid; text-align: left; gap: 2px; }
+.al-main b { font-size: 34px; font-weight: 900; font-stretch: 115%; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.al-main span { font-size: 13px; color: var(--dim); }
+.al-main small { font-size: 12px; }
+.al-add { display: block; margin: 16px auto 0; }
+.al-edit { display: grid; gap: 16px; }
+.al-edit label, .al-days { display: grid; gap: 6px; font-size: 13px; color: var(--dim); }
+.al-edit input { padding: 12px 14px; border-radius: 12px; border: var(--stroke) solid var(--line); background: var(--bg); color: var(--fg); font: inherit; }
+.al-edit input:focus { outline: none; border-color: var(--fg); }
+.al-time-in input { font-size: 40px; font-weight: 900; font-variant-numeric: tabular-nums; color-scheme: dark; }
+.al-days > div { display: flex; gap: 6px; flex-wrap: wrap; }
+.clk .al-days > div button { padding: 8px 12px; min-width: 52px; font-size: 13px; }
+.clk .al-days > div button.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.al-days small { font-size: 12px; }
+.al-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* Timer */
+.tm { display: grid; justify-items: center; }
+.tm-set { display: flex; align-items: flex-start; gap: 8px; }
+.tm-set > b { font-size: 54px; font-weight: 900; line-height: 1.1; color: var(--dim); }
+.tm-num { display: grid; justify-items: center; gap: 4px; font-size: 12px; color: var(--dim); }
+.tm-num input { width: 104px; text-align: center; font-size: 54px; font-weight: 900; font-stretch: 115%; background: var(--bg); color: var(--fg);
+  border: var(--stroke) solid var(--line); border-radius: 16px; padding: 6px 4px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.tm-num input::-webkit-inner-spin-button, .tm-num input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.tm-num input:focus { outline: none; border-color: var(--fg); }
+.tm-quick { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 20px 0 6px; }
+.clk .tm-quick button { padding: 8px 16px; font-size: 13px; }
+.tm .clk-big { margin-top: 14px; }
+.tm-ring { position: relative; width: min(300px, 80vw); aspect-ratio: 1; }
+.tm-ring svg { width: 100%; height: 100%; rotate: -90deg; }
+.tm-ring circle { fill: none; stroke-width: 8; }
+.tm-track { stroke: var(--line); }
+.tm-left { stroke: var(--fg); stroke-linecap: round; transition: stroke-dashoffset 0.25s linear; }
+.tm-left-txt { position: absolute; inset: 0; display: grid; place-items: center; font-size: clamp(40px, 9vw, 64px); font-weight: 900;
+  font-stretch: 115%; font-variant-numeric: tabular-nums; }
+
+/* Stopwatch */
+.sw { display: grid; justify-items: center; }
+.sw-time { font-size: clamp(48px, 12vw, 92px); font-weight: 900; font-stretch: 115%; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.sw-laps { list-style: none; width: 100%; margin: 22px 0 0; padding: 0; display: grid; gap: 4px; max-height: 40vh; overflow: auto; }
+.sw-laps li { display: grid; grid-template-columns: 1fr auto auto; gap: 18px; padding: 9px 12px; border-bottom: var(--stroke) solid var(--line);
+  font-variant-numeric: tabular-nums; font-size: 15px; }
+.sw-laps li span { color: var(--dim); }
+.sw-laps li em { font-style: normal; color: var(--dim); }
+
+/* Ringing */
+.rng { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; background: #000; padding: 20px; }
+.rng-box { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.rng-bell svg { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; animation: rng-shake 0.5s ease-in-out infinite; }
+@keyframes rng-shake { 0%, 100% { rotate: 0deg; } 25% { rotate: -16deg; } 75% { rotate: 16deg; } }
+@media (prefers-reduced-motion: reduce) { .rng-bell svg { animation: none; } }
+.rng h1 { margin: 0; font-size: clamp(44px, 10vw, 84px); font-weight: 900; font-stretch: 120%; letter-spacing: -0.03em; }
+.rng-label { margin: 0; font-size: 22px; font-weight: 700; }
+.rng-now { margin: 0; font-size: 18px; color: var(--dim); font-variant-numeric: tabular-nums; }

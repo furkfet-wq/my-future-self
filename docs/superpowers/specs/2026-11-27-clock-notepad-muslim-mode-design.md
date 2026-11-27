@@ -86,14 +86,16 @@ and a notepad), and a Muslim mode so people who are not Muslim can use the app w
   country). Search uses Open-Meteo's free place search (no key) from the browser. "Use my location" uses the
   browser's location (asks permission) and shows the nearest place name.
 - Saved in `settings.place = {name, region, country, lat, lon, tz}`; empty = Coventry (as now).
-- Coventry keeps namazvakitleri exactly as today. Any other place: the Worker gets times from Aladhan
-  (api.aladhan.com, method 13 = Turkish Diyanet, the same method namazvakitleri uses; a few minutes' difference is
-  normal), this month and next, cached 12 h per place, mapped to the same row format
-  (imsak=Fajr, gunes, ogle, ikindi, aksam, yatsi). `/prayer-times.json?lat=..&lon=..`.
-- Times are shown in the place's own time zone? No: shown as the place's local clock times (what a person there
-  sees), and countdowns use the place's time zone (`tz` from the search) so they are right even when the device is
-  elsewhere.
-- Privacy page and CSP updated for the two new services.
+- Times come ONLY from namazvakitleri (owner: other sources are sometimes inaccurate). namazvakitleri has 8,606
+  cities worldwide, each with a public page `/en/city/<id>/...` carrying the times (same parsing as today).
+  The chosen place's coordinates pick the NEAREST namazvakitleri city (list of id + lat/lng saved into the Worker
+  at deploy time from namazvakitleri's own location list; the saved copy is used if that list cannot be fetched).
+  The card shows which city the times are for ("Times for Istanbul") and, if the nearest city is far (> 30 km),
+  says how far. Coventry stays the default (city 3170). Worker: `/prayer-times.json?city=<id>`, cached 6 h per
+  city, unknown id -> 400.
+- Times are the place's local clock times; the app assumes the device is in that place (normal use), so
+  countdowns use the device clock (builder's call: no time-zone conversion).
+- Privacy page and CSP updated for the place search service.
 
 ## Security pass (owner: "make sure the website actually protects them")
 

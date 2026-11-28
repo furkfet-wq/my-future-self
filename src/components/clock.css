@@ -138,9 +138,18 @@
 .clk { background: #000; isolation: isolate; }
 .clk-light { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
   background: radial-gradient(ellipse 80% 55% at 50% 102%, rgba(255, 255, 255, 0.26) 0%, rgba(235, 240, 255, 0.11) 38%, rgba(255, 255, 255, 0.03) 64%, transparent 82%); }
-.clk-spot { position: fixed; left: 0; top: 0; z-index: -1; width: 560px; height: 560px; margin: -280px 0 0 -280px; border-radius: 50%;
-  pointer-events: none; opacity: 0; will-change: transform, opacity; transition: opacity 0.6s ease;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07) 40%, rgba(255, 255, 255, 0.02) 70%, transparent); }
+/* Mouse light: small and soft, with many colour stops so the edge fades smoothly (no rings). Inside it a fine
+   dot grid shows up, as if the light uncovers a pattern on the dark wall; the dots stay put while the light
+   moves (ClockPanel shifts the pattern back by the light's own position). */
+.clk-spot { position: fixed; left: 0; top: 0; z-index: -1; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%;
+  pointer-events: none; opacity: 0; will-change: transform, opacity; transition: opacity 0.5s ease;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.1) 12%, rgba(255, 255, 255, 0.065) 28%,
+    rgba(255, 255, 255, 0.035) 46%, rgba(255, 255, 255, 0.015) 64%, rgba(255, 255, 255, 0.004) 82%, transparent 100%); }
+.clk-spot::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0.8px, transparent 1.4px); background-size: 22px 22px;
+  background-position: var(--gx, 0) var(--gy, 0);
+  -webkit-mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%); }
 .clk-spot.on { opacity: 1; }
 .clk::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none; height: 75vh; opacity: 0.45;
   background: repeating-linear-gradient(90deg, transparent 0 9vw, rgba(255, 255, 255, 0.06) 9vw calc(9vw + 1px), transparent calc(9vw + 2px) 13vw);

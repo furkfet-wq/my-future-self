@@ -443,10 +443,16 @@ function useMouseLight(root, spot) {
     if (!el || !light || !matchMedia("(hover: hover)").matches) return undefined;
     const pos = { x: innerWidth / 2, y: innerHeight, tx: innerWidth / 2, ty: innerHeight };
     let raf = 0;
+    // move the light, and shift its dot pattern back by the same amount so the dots stay fixed on the page
+    const place = () => {
+      light.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+      light.style.setProperty("--gx", `${(150 - pos.x) % 22}px`);
+      light.style.setProperty("--gy", `${(150 - pos.y) % 22}px`);
+    };
     const draw = () => {
       pos.x += (pos.tx - pos.x) * 0.16;
       pos.y += (pos.ty - pos.y) * 0.16;
-      light.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+      place();
       raf = Math.abs(pos.tx - pos.x) + Math.abs(pos.ty - pos.y) > 0.3 ? requestAnimationFrame(draw) : 0;
     };
     const onMove = (e) => {
@@ -455,7 +461,7 @@ function useMouseLight(root, spot) {
         // first time on the background: start right at the mouse instead of flying in
         pos.x = pos.tx = e.clientX;
         pos.y = pos.ty = e.clientY;
-        light.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+        place();
       }
       light.classList.toggle("on", !onMenu);
       pos.tx = e.clientX;

@@ -12,7 +12,7 @@ const DAYS = [
   [6, "Sat"],
   [0, "Sun"],
 ];
-const QUICK_MIN = [1, 3, 5, 10, 15, 20, 25, 30, 45, 60];
+const QUICK_MIN = [1, 2, 3, 5, 10, 15, 20, 25, 30, 45, 60, 90, 120, 180]; // two rows of 7
 const newId = () => Math.random().toString(36).slice(2, 10);
 
 // Re-render every `ms` (the clock faces tick).
@@ -448,6 +448,11 @@ export function ClockPanel({ alarms, onAlarms, ringing = alarms.length, timer, s
   ];
   return (
     <div className="clk" role="dialog" aria-modal="true" aria-label="Clock" ref={root}>
+      <div className="clk-light" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </div>
       <div className="clk-top">
         <div className="clk-now">{new Date(now).toLocaleTimeString("en-GB")}</div>
         <button className="st-close clk-close" onClick={onClose} aria-label="Close clock">

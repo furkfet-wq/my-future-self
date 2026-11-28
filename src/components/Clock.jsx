@@ -431,16 +431,60 @@ function Stopwatch({ sw, setSw }) {
   );
 }
 
+/* ---------- Mouse light ----------
+   Over empty dark background a soft light follows the mouse; over any menu part (buttons, boxes, cards, rings,
+   tabs, lists) it fades out. The light glides after the mouse (eased every frame) and the loop stops by itself
+   once the light has caught up, so nothing runs while the mouse is still. */
+const MENU_PARTS = "button, input, label, select, textarea, li, .clk-card, .clk-tabs, .clk-row, .tm-ring, .tm-quick, .tm-recent, .al-list, .al-edit, .clk-note, .al-next, .clk-now";
+function useMouseLight(root, spot) {
+  useEffect(() => {
+    const el = root.current;
+    const light = spot.current;
+    if (!el || !light || !matchMedia("(hover: hover)").matches) return undefined;
+    const pos = { x: innerWidth / 2, y: innerHeight, tx: innerWidth / 2, ty: innerHeight };
+    let raf = 0;
+    const draw = () => {
+      pos.x += (pos.tx - pos.x) * 0.16;
+      pos.y += (pos.ty - pos.y) * 0.16;
+      light.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+      raf = Math.abs(pos.tx - pos.x) + Math.abs(pos.ty - pos.y) > 0.3 ? requestAnimationFrame(draw) : 0;
+    };
+    const onMove = (e) => {
+      const onMenu = !!e.target.closest?.(MENU_PARTS);
+      if (!light.classList.contains("on") && !onMenu) {
+        // first time on the background: start right at the mouse instead of flying in
+        pos.x = pos.tx = e.clientX;
+        pos.y = pos.ty = e.clientY;
+        light.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
+      }
+      light.classList.toggle("on", !onMenu);
+      pos.tx = e.clientX;
+      pos.ty = e.clientY;
+      if (!raf) raf = requestAnimationFrame(draw);
+    };
+    const onLeave = () => light.classList.remove("on");
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerleave", onLeave);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerleave", onLeave);
+    };
+  }, [root, spot]);
+}
+
 /* ---------- The full-screen Clock ---------- */
 export function ClockPanel({ alarms, onAlarms, ringing = alarms.length, timer, setTimer, sw, setSw, onClose }) {
   const [tab, setTab] = useState("alarms");
   const now = useTick(1000);
   const root = useRef(null);
+  const spot = useRef(null);
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && !e.target.closest?.("input") && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+  useMouseLight(root, spot);
   const tabs = [
     ["alarms", "Alarms"],
     ["timer", "Timer"],
@@ -448,10 +492,8 @@ export function ClockPanel({ alarms, onAlarms, ringing = alarms.length, timer, s
   ];
   return (
     <div className="clk" role="dialog" aria-modal="true" aria-label="Clock" ref={root}>
-      <div className="clk-light" aria-hidden="true">
-        <i />
-        <i />
-      </div>
+      <div className="clk-light" aria-hidden="true" />
+      <div className="clk-spot" ref={spot} aria-hidden="true" />
       <div className="clk-top">
         <div className="clk-now">{new Date(now).toLocaleTimeString("en-GB")}</div>
         <button className="st-close clk-close" onClick={onClose} aria-label="Close clock">

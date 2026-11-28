@@ -57,7 +57,8 @@ export async function signIn(sub) {
   return cookieOf(res);
 }
 
-export async function startWorker() {
+// limits: daily caps for this run (the e2e tests use small ones to reach them; the browser tests make many calls)
+export async function startWorker(limits = { DAILY_USER: 100, DAILY_SAVES: 5, DAILY_VISITOR: 30 }) {
   keyServer = http.createServer((q, r) => {
     r.setHeader("content-type", "application/json");
     r.setHeader("cache-control", "public, max-age=3600");
@@ -77,7 +78,7 @@ export async function startWorker() {
     ["node_modules/wrangler/bin/wrangler.js", "dev", "--local", "--port", "8787", "--ip", "127.0.0.1", "--show-interactive-dev-session=false",
       "--var", `GOOGLE_CLIENT_ID:${CLIENT_ID}`, "--var", "JWKS_URL:http://127.0.0.1:8790/certs", "--var", "PRAYER_URL:http://127.0.0.1:9/", "--var", "TEST_MODE:1", "--var", "PRAYER_BASE:http://127.0.0.1:8792",
       // small daily limits so the tests can reach them (live: 800 calls, 600 saves, 200 before sign-in)
-      "--var", "DAILY_USER:100", "--var", "DAILY_SAVES:5", "--var", "DAILY_VISITOR:30"],
+      ...Object.entries(limits).flatMap(([k, v]) => ["--var", `${k}:${v}`])],
     { stdio: "ignore" }
   );
   for (let i = 0; i < 120; i++) {

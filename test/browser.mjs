@@ -24,7 +24,7 @@ const FAKE_GIS = `window.google = { accounts: { id: {
 
 let browser;
 before(async () => {
-  await startWorker();
+  await startWorker({ DAILY_USER: 100000, DAILY_SAVES: 100000, DAILY_VISITOR: 100000 });
   browser = await chromium.launch({ channel: "msedge", headless: true });
 });
 after(async () => {

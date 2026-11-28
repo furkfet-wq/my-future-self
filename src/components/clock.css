@@ -24,12 +24,13 @@
 .clk-tabs button.on { background: var(--fg); color: var(--bg); }
 .clk-body { width: min(560px, 100%); }
 .clk-row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
-.clk-btnlike, .clk .clk-row button, .clk .al-actions button, .clk .al-add, .clk .tm-quick button, .clk .al-days button, .rng button {
+.clk-btnlike, .clk .clk-row button, .clk .al-actions button, .clk .al-add, .clk .tm-quick button, .clk .al-days button {
   padding: 11px 22px; border-radius: 999px; font-weight: 800; border: var(--stroke) solid var(--line); color: var(--fg);
   transition: background 0.2s, color 0.2s, border-color 0.2s, translate 0.6s var(--rise); }
 .clk .clk-row button:not(:disabled):hover, .clk .al-actions button:hover, .clk .al-add:hover, .clk .tm-quick button:hover,
-.clk .al-days button:hover, .rng button:hover { translate: 0 -2px; border-color: var(--fg); }
-.clk .clk-primary, .rng .clk-primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.clk .al-days button:hover { translate: 0 -2px; border-color: var(--fg); }
+/* button.clk-primary: must beat ".clk .clk-row button" (white text), or Save / Start were white on white */
+.clk button.clk-primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .clk-big { min-width: 150px; font-size: 17px; }
 .clk button:disabled { opacity: 0.35; cursor: default; }
 .clk .clk-danger { color: #ff6a6a; }
@@ -87,12 +88,3 @@
 .sw-laps li span { color: var(--dim); }
 .sw-laps li em { font-style: normal; color: var(--dim); }
 
-/* Ringing */
-.rng { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; background: #000; padding: 20px; }
-.rng-box { display: grid; justify-items: center; gap: 10px; text-align: center; }
-.rng-bell svg { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; animation: rng-shake 0.5s ease-in-out infinite; }
-@keyframes rng-shake { 0%, 100% { rotate: 0deg; } 25% { rotate: -16deg; } 75% { rotate: 16deg; } }
-@media (prefers-reduced-motion: reduce) { .rng-bell svg { animation: none; } }
-.rng h1 { margin: 0; font-size: clamp(44px, 10vw, 84px); font-weight: 900; font-stretch: 120%; letter-spacing: -0.03em; }
-.rng-label { margin: 0; font-size: 22px; font-weight: 700; }
-.rng-now { margin: 0; font-size: 18px; color: var(--dim); font-variant-numeric: tabular-nums; }

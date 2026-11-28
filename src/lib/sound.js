@@ -147,10 +147,15 @@ export const sfx = {
   },
 };
 
-// Loud two-tone siren, repeats every second until alarmStop().
+// Loud two-tone siren, repeats every second until alarmStop(). Several alarms can ring at once (a prayer alarm and
+// a clock alarm): each one starts and stops with its own `owner` name, and the siren only stops when none is left.
+// Starting and stopping also tells the cube (event "mfs:alarm") to spin with its red light, or calm down.
 let alarmTimer = null;
-export function alarmStart() {
+const owners = new Set();
+export function alarmStart(owner = "main") {
+  owners.add(owner);
   if (alarmTimer) return;
+  window.dispatchEvent(new CustomEvent("mfs:alarm", { detail: true }));
   const play = () => {
     tone({ freq: 880, type: "square", dur: 0.45, vol: 0.32, attack: 0.01, force: true });
     tone({ freq: 440, type: "sawtooth", dur: 0.45, vol: 0.18, attack: 0.01, force: true });
@@ -160,9 +165,12 @@ export function alarmStart() {
   play();
   alarmTimer = setInterval(play, 1000);
 }
-export function alarmStop() {
+export function alarmStop(owner = "main") {
+  owners.delete(owner);
+  if (owners.size || !alarmTimer) return;
   clearInterval(alarmTimer);
   alarmTimer = null;
+  window.dispatchEvent(new CustomEvent("mfs:alarm", { detail: false }));
 }
 
 // poking the cube: plastic knock, higher and harder with every click

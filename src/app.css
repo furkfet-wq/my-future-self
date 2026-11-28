@@ -379,21 +379,7 @@ button.ad-tr:hover { background: var(--soft); translate: 0 -2px; }
 .hg-name.now span, .hg-name.now .hg-note { color: var(--bg); }
 @media (max-width: 700px) { .sl-count { text-align: left; } }
 
-/* ---------- Prayer alarm ---------- */
-.alarm-veil { position: fixed; inset: 0; z-index: 150; pointer-events: none; background: rgba(255, 0, 0, 0.32);
-  animation: alarm-blink 0.5s steps(1, end) infinite; }
-@keyframes alarm-blink { 0% { opacity: 1; } 50% { opacity: 0; } }
-.alarm {
-  position: fixed; left: 50%; top: 16px; translate: -50% 0; z-index: 160; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;
-  width: min(680px, calc(100vw - 24px)); padding: 14px 16px; border-radius: 14px; background: #000; border: 2px solid #ff2a2a;
-  box-shadow: 0 0 40px rgba(255, 0, 0, 0.55);
-}
-.alarm div { flex: 1 1 220px; display: grid; gap: 2px; }
-.alarm b { font-size: 20px; font-variant-numeric: tabular-nums; }
-.alarm span { font-size: 13px; color: rgba(255, 255, 255, 0.7); }
-.alarm button { border-radius: 999px; padding: 9px 16px; font-weight: 800; background: #fff; color: #000; transition: translate 0.4s var(--rise); }
-.alarm button:hover { translate: 0 -2px; }
-.alarm .alarm-stop { background: transparent; color: #fff; border: 1.5px solid #ff2a2a; }
+/* Prayer alarm: see components/alarm.css (one banner for every alarm) */
 
 /* compact grid (salah) */
 .hg-compact .hg { row-gap: 5px; }

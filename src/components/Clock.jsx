@@ -338,34 +338,3 @@ export function ClockPanel({ alarms, onAlarms, ringing = alarms.length, timer, s
     </div>
   );
 }
-
-/* ---------- Ringing ---------- */
-export function Ringer({ ring, onStop, onSnooze }) {
-  const now = useTick(1000);
-  const title = { timer: "Time's up", reminder: "Reminder" }[ring.kind] || "Alarm";
-  return (
-    <div className="rng" role="alertdialog" aria-modal="true" aria-label={title}>
-      <div className="rng-box">
-        <div className="rng-bell" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="64" height="64">
-            <circle cx="12" cy="13" r="8" />
-            <path d="M12 13V9.5M12 13h3.5M5 4.5 2.8 6.6M19 4.5l2.2 2.1" />
-          </svg>
-        </div>
-        <h1>{title}</h1>
-        {ring.label && <p className="rng-label">{ring.label}</p>}
-        <p className="rng-now">{new Date(now).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</p>
-        <div className="clk-row">
-          <button className="clk-primary clk-big" onClick={onStop} autoFocus>
-            Stop
-          </button>
-          {ring.kind !== "timer" && (
-            <button className="clk-big" onClick={onSnooze}>
-              Snooze 5 min
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}

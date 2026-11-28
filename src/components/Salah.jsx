@@ -13,6 +13,7 @@ import {
   ALARM_BEFORE_MS,
 } from "../lib/prayer.js";
 import { alarmStart, alarmStop } from "../lib/sound.js";
+import { AlarmBanner } from "./AlarmBanner.jsx";
 
 function useNow(ms = 1000) {
   const [now, setNow] = useState(() => new Date());
@@ -224,39 +225,26 @@ export function PrayerAlarm({ state, prayer, onPrayed, enabled = true, test = 0,
   useEffect(() => {
     if (targetId && active.current !== targetId) {
       active.current = targetId;
-      alarmStart();
-      window.dispatchEvent(new CustomEvent("mfs:alarm", { detail: true }));
+      alarmStart("prayer"); // siren, red page and spinning cube (stops only when no other alarm rings)
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else if (!targetId && active.current) {
       active.current = null;
-      alarmStop();
-      window.dispatchEvent(new CustomEvent("mfs:alarm", { detail: false }));
+      alarmStop("prayer");
     }
   }, [targetId]);
 
-  useEffect(
-    () => () => {
-      alarmStop();
-      window.dispatchEvent(new CustomEvent("mfs:alarm", { detail: false }));
-    },
-    []
-  );
+  useEffect(() => () => alarmStop("prayer"), []);
 
   if (!target) return null;
   if (target.test) {
     return (
-      <>
-        <div className="alarm-veil" aria-hidden="true" />
-        <div className="alarm" role="alert">
-          <div>
-            <b>Alarm test</b>
-            <span>This is how the prayer alarm looks and sounds.</span>
-          </div>
-          <button className="alarm-stop" onClick={onTestEnd}>
-            Stop test
-          </button>
-        </div>
-      </>
+      <AlarmBanner
+        kind="test"
+        eyebrow="Alarm test"
+        title="This is how every alarm looks and sounds"
+        detail="Prayer alarms, clock alarms, timers and calendar reminders all ring like this."
+        actions={[{ label: "Stop test", onClick: onTestEnd, primary: true }]}
+      />
     );
   }
   const name = prayerName(target.id);
@@ -273,20 +261,15 @@ export function PrayerAlarm({ state, prayer, onPrayed, enabled = true, test = 0,
   };
 
   return (
-    <>
-      <div className="alarm-veil" aria-hidden="true" />
-      <div className="alarm" role="alert">
-        <div>
-          <b>
-            {name} ends in {fmtHMS(target.end - now)}
-          </b>
-          <span>You have not ticked {name} yet.</span>
-        </div>
-        <button onClick={() => onPrayed(target.key, target.id)}>I prayed {name}</button>
-        <button className="alarm-stop" onClick={stop}>
-          Stop alarm
-        </button>
-      </div>
-    </>
+    <AlarmBanner
+      kind="prayer"
+      eyebrow="Prayer alarm"
+      title={`${name} ends in ${fmtHMS(target.end - now)}`}
+      detail={`You have not ticked ${name} yet.`}
+      actions={[
+        { label: `I prayed ${name}`, onClick: () => onPrayed(target.key, target.id), primary: true },
+        { label: "Stop alarm", onClick: stop },
+      ]}
+    />
   );
 }

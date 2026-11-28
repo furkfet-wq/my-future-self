@@ -29,7 +29,8 @@ import Lock from "./components/Lock.jsx";
 import { hasPin, clearPin } from "./lib/lock.js";
 import { weekData, shiftKey, parseKey, dayStats, streak as perfectStreak, salahStreak } from "./lib/week.js";
 import { useCloudSave } from "./lib/sync.js";
-import { ClockButton, ClockPanel, Ringer } from "./components/Clock.jsx";
+import { ClockButton, ClockPanel } from "./components/Clock.jsx";
+import { AlarmBanner } from "./components/AlarmBanner.jsx";
 import { Notepad, NotepadButton } from "./components/Notepad.jsx";
 import { Calculator, CalculatorButton } from "./components/Calculator.jsx";
 import { Calendar, CalendarButton } from "./components/Calendar.jsx";
@@ -315,7 +316,7 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
   const [timer, setTimer] = useLocal("mfs-timer-v1", { endsAt: null, pausedLeft: null, total: 0 });
   const [sw, setSw] = useLocal("mfs-stopwatch-v1", { startedAt: null, banked: 0, laps: [] });
   const [snooze, setSnooze] = useLocal("mfs-snooze-v1", null); // { at, label }
-  const [ring, setRing] = useState(null); // { kind: "alarm" | "timer", label }
+  const [ring, setRing] = useState(null); // { kind: "alarm" | "timer" | "reminder", label, detail }
   const live = useRef({});
   live.current = { alarms: state.alarms || [], reminders: state.reminders || {}, timer, snooze, setAlarms: actions.setAlarms, setTimer, setSnooze };
   useEffect(() => {
@@ -327,13 +328,14 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
       const dueRem = dueReminders(L.reminders, last, now);
       last = now;
       if (due.length) {
-        setRing({ kind: "alarm", label: due.map((a) => a.label).filter(Boolean).join(", ") });
+        setRing({ kind: "alarm", label: due.map((a) => a.label).filter(Boolean).join(", "), detail: `Set for ${[...new Set(due.map((a) => a.time))].join(", ")}` });
         const once = new Set(due.filter((a) => !a.days.length).map((a) => a.id));
         if (once.size) L.setAlarms(L.alarms.map((a) => (once.has(a.id) ? { ...a, on: false } : a)));
       }
       if (dueRem.length) {
-        const words = dueRem.map(({ r }) => [r.name, r.text].filter(Boolean).join(": ").slice(0, 160)).filter(Boolean);
-        setRing({ kind: "reminder", label: words.join("  ·  ") });
+        const label = dueRem.map(({ r }) => r.name || "Reminder").join(", ");
+        const detail = dueRem.map(({ r }) => r.text.trim()).filter(Boolean).join("  ·  ").slice(0, 300);
+        setRing({ kind: "reminder", label, detail });
       }
       if (L.timer.endsAt != null && now.getTime() >= L.timer.endsAt) {
         L.setTimer({ endsAt: null, pausedLeft: null, total: 0 });
@@ -341,15 +343,16 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
       }
       if (L.snooze && now.getTime() >= L.snooze.at) {
         L.setSnooze(null);
-        setRing({ kind: L.snooze.kind || "alarm", label: L.snooze.label });
+        setRing({ kind: L.snooze.kind || "alarm", label: L.snooze.label, detail: L.snooze.detail || "" });
       }
     }, 1000);
     return () => clearInterval(id);
   }, []);
   useEffect(() => {
     if (!ring) return undefined;
-    alarmStart();
-    return () => alarmStop();
+    alarmStart("ring"); // like the prayer alarm: siren, red blinking page, spinning cube
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return () => alarmStop("ring");
   }, [ring]);
 
   function shiftMonth(delta) {
@@ -422,13 +425,25 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
       {calcOpen && <Calculator onClose={closeCalc} />}
       {calendarAt !== null && <Calendar reminders={state.reminders || {}} onReminders={actions.setReminders} onClose={closeCalendar} startKey={calendarAt || undefined} alarmCount={(state.alarms || []).length} />}
       {ring && (
-        <Ringer
-          ring={ring}
-          onStop={() => setRing(null)}
-          onSnooze={() => {
-            setSnooze({ at: Date.now() + 5 * 60000, label: ring.label, kind: ring.kind });
-            setRing(null);
-          }}
+        <AlarmBanner
+          kind={ring.kind}
+          eyebrow={{ alarm: "Alarm", timer: "Timer", reminder: "Reminder" }[ring.kind] || "Alarm"}
+          title={ring.label || (ring.kind === "timer" ? "Time's up" : ring.kind === "reminder" ? "Reminder" : "Alarm")}
+          detail={ring.detail || (ring.kind === "timer" ? "Your timer has finished." : "")}
+          actions={[
+            { label: "Stop", onClick: () => setRing(null), primary: true },
+            ...(ring.kind === "timer"
+              ? []
+              : [
+                  {
+                    label: "Snooze 5 min",
+                    onClick: () => {
+                      setSnooze({ at: Date.now() + 5 * 60000, label: ring.label, detail: ring.detail || "", kind: ring.kind });
+                      setRing(null);
+                    },
+                  },
+                ]),
+          ]}
         />
       )}
       <SoundToggle />

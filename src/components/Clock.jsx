@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { nextRing, fmtIn, fmtClock, timerLeft, stopwatchElapsed } from "../lib/clock.js";
+import { MAX_ALARMS } from "../../shared/doc.js";
 import "./clock.css";
 
 const DAYS = [
@@ -98,7 +99,7 @@ function AlarmEditor({ alarm, onSave, onCancel, onDelete }) {
   );
 }
 
-function Alarms({ alarms, onAlarms }) {
+function Alarms({ alarms, onAlarms, ringing }) {
   const now = new Date(useTick(15000));
   const [editing, setEditing] = useState(null); // alarm being edited, or a new one
   const sorted = [...alarms].sort((a, b) => a.time.localeCompare(b.time));
@@ -151,12 +152,14 @@ function Alarms({ alarms, onAlarms }) {
           );
         })}
       </ul>
-      {alarms.length < 30 ? (
+      {ringing < MAX_ALARMS ? (
         <button className="clk-primary al-add" onClick={() => setEditing({ id: newId(), time: "07:00", label: "", days: [], on: true })}>
           Add alarm
         </button>
       ) : (
-        <p className="al-next">You have the most alarms allowed (30).</p>
+        <p className="al-next">
+          You have the most alarms allowed ({MAX_ALARMS}). Calendar reminders with a ring time count too.
+        </p>
       )}
       <p className="clk-note">Alarms ring while My Future Self is open in a tab, even in the background.</p>
     </div>
@@ -298,7 +301,7 @@ function Stopwatch({ sw, setSw }) {
 }
 
 /* ---------- The full-screen Clock ---------- */
-export function ClockPanel({ alarms, onAlarms, timer, setTimer, sw, setSw, onClose }) {
+export function ClockPanel({ alarms, onAlarms, ringing = alarms.length, timer, setTimer, sw, setSw, onClose }) {
   const [tab, setTab] = useState("alarms");
   const now = useTick(1000);
   const root = useRef(null);
@@ -328,7 +331,7 @@ export function ClockPanel({ alarms, onAlarms, timer, setTimer, sw, setSw, onClo
         ))}
       </div>
       <div className="clk-body" role="tabpanel">
-        {tab === "alarms" && <Alarms alarms={alarms} onAlarms={onAlarms} />}
+        {tab === "alarms" && <Alarms alarms={alarms} onAlarms={onAlarms} ringing={ringing} />}
         {tab === "timer" && <Timer timer={timer} setTimer={setTimer} />}
         {tab === "stopwatch" && <Stopwatch sw={sw} setSw={setSw} />}
       </div>

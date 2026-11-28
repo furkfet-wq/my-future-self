@@ -24,7 +24,11 @@ export const NOTE_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px
 export const NOTE_COLOURS = ["#ffffff", "#ff5c5c", "#ffa24c", "#ffd84c", "#6ee07a", "#4cc3ff", "#7a8cff", "#c77dff", "#ff7ac8"];
 export const NOTE_HIGHLIGHTS = ["#ffd84c", "#6ee07a", "#4cc3ff", "#ff7ac8", "#ffa24c", "#ffffff"];
 export const NOTE_MAX_BYTES = 300_000;
-export const MAX_ALARMS = 30;
+export const NOTE_MAX_CHARS = 20_000; // letters in the notepad (spaces count, new lines do not)
+// Things that ring, wherever they were made: clock alarms + calendar reminders that have a ring time.
+export const MAX_ALARMS = 50;
+export const ringingCount = (alarms, reminders) =>
+  (alarms?.length || 0) + Object.values(reminders || {}).reduce((n, list) => n + list.filter((r) => r.time).length, 0);
 const TEXT_STYLE = { color: NOTE_COLOURS, fontSize: NOTE_SIZES, fontFamily: NOTE_FONTS };
 // Text and highlight colours: one of the toolbar's, or any colour from the colour menu as exactly "#rrggbb"
 // (lower case, nothing else, so it can never carry anything but a colour into the page).
@@ -62,9 +66,18 @@ function cleanInline(node) {
 export function cleanNotes(notes) {
   if (!isObj(notes) || notes.type !== "doc" || !Array.isArray(notes.content)) return null;
   const content = [];
+  let room = NOTE_MAX_CHARS; // text past 20,000 letters is cut off
   for (const block of notes.content) {
     if (!isObj(block) || block.type !== "paragraph") continue;
-    const inner = (Array.isArray(block.content) ? block.content : []).map(cleanInline).filter(Boolean);
+    const inner = [];
+    for (const node of (Array.isArray(block.content) ? block.content : []).map(cleanInline).filter(Boolean)) {
+      if (node.type === "text") {
+        if (room <= 0) continue;
+        if (node.text.length > room) node.text = node.text.slice(0, room);
+        room -= node.text.length;
+      }
+      inner.push(node);
+    }
     content.push(inner.length ? { type: "paragraph", content: inner } : { type: "paragraph" });
   }
   const out = { type: "doc", content };
@@ -87,9 +100,10 @@ export function cleanAlarms(list) {
 export const MAX_REMINDERS = 1000;
 export const REMINDER_NAME_MAX = 60;
 export const REMINDER_TEXT_MAX = 1000;
-export function cleanReminders(days) {
+export function cleanReminders(days, ringRoom = MAX_ALARMS) {
   const out = {};
   let count = 0;
+  let rings = 0; // ring times kept; past the alarm limit a reminder is kept, without its ring time
   for (const [day, list] of Object.entries(isObj(days) ? days : {})) {
     if (!DAY.test(day) || !Array.isArray(list)) continue;
     const kept = [];
@@ -100,7 +114,7 @@ export function cleanReminders(days) {
         id: r.id,
         name: typeof r.name === "string" ? r.name.slice(0, REMINDER_NAME_MAX) : "",
         text: typeof r.text === "string" ? r.text.slice(0, REMINDER_TEXT_MAX) : "",
-        time: TIME.test(r.time) ? r.time : "",
+        time: TIME.test(r.time) && rings++ < ringRoom ? r.time : "",
       });
       count++;
     }
@@ -154,6 +168,7 @@ export function cleanDoc(doc) {
     for (const [g, v] of Object.entries(raw.hiddenGraphs)) if (v === true && g.length <= 32) settings.hiddenGraphs[g] = true;
   }
   const place = cleanPlace(raw.place);
+  const alarms = cleanAlarms(s.alarms);
   if (place) settings.place = place;
   return {
     v: DOC_VERSION,
@@ -164,8 +179,8 @@ export function cleanDoc(doc) {
       salah: cleanTicks(s.salah),
       startBalance: typeof s.startBalance === "number" && Number.isFinite(s.startBalance) ? s.startBalance : 0,
       notes: cleanNotes(s.notes),
-      alarms: cleanAlarms(s.alarms),
-      reminders: cleanReminders(s.reminders),
+      alarms,
+      reminders: cleanReminders(s.reminders, MAX_ALARMS - alarms.length),
     },
     settings,
   };

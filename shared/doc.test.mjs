@@ -101,9 +101,9 @@ test("notes keep only allowed nodes and marks", () => {
   });
 });
 
-test("notes over 300 KB are dropped to null; missing notes are null", () => {
+test("long notes are cut to 20,000 letters; missing notes are null", () => {
   const big = { type: "doc", content: [para(txt("x".repeat(300_001)))] };
-  assert.equal(withState({ notes: big }).state.notes, null);
+  assert.equal(withState({ notes: big }).state.notes.content[0].content[0].text.length, 20_000);
   assert.equal(cleanDoc(good()).state.notes, null);
   assert.equal(withState({ notes: { type: "nope" } }).state.notes, null);
 });
@@ -111,11 +111,11 @@ test("notes over 300 KB are dropped to null; missing notes are null", () => {
 test("alarms are cleaned", () => {
   const ok = { id: "a1", time: "07:05", label: "Gym", days: [5, 1, 1, 9], on: true };
   const list = [ok, { id: "b", time: "25:00", label: "", days: [], on: true }, { id: "c", time: "06:00", label: "x".repeat(60), days: "mon", on: "yes" }];
-  for (let i = 0; i < 40; i++) list.push({ id: `n${i}`, time: "09:00", label: "", days: [], on: false });
+  for (let i = 0; i < 60; i++) list.push({ id: `n${i}`, time: "09:00", label: "", days: [], on: false });
   const c = withState({ alarms: list }).state.alarms;
   assert.deepEqual(c[0], { id: "a1", time: "07:05", label: "Gym", days: [1, 5], on: true });
   assert.deepEqual(c[1], { id: "c", time: "06:00", label: "x".repeat(40), days: [], on: false });
-  assert.equal(c.length, 30);
+  assert.equal(c.length, 50);
   assert.deepEqual(cleanDoc(good()).state.alarms, []);
 });
 
@@ -146,4 +146,20 @@ test("notes keep colour-menu colours only as exact #rrggbb", async () => {
     assert.equal(one([{ type: "textStyle", attrs: { color: bad } }]), undefined, String(bad));
     assert.equal(one([{ type: "highlight", attrs: { color: bad } }]), undefined, String(bad));
   }
+});
+
+test("notes stop at 20,000 letters; at most 50 things ring (alarms + timed reminders)", async () => {
+  const { cleanNotes, ringingCount, MAX_ALARMS } = await import("./doc.js");
+  const para = (text) => ({ type: "paragraph", content: [{ type: "text", text }] });
+  const n = cleanNotes({ type: "doc", content: [para("a".repeat(15000)), para("b".repeat(8000)), para("c")] });
+  assert.equal(n.content[0].content[0].text.length, 15000);
+  assert.equal(n.content[1].content[0].text.length, 5000);
+  assert.deepEqual(n.content[2], { type: "paragraph" });
+  const alarms = Array.from({ length: 45 }, (_, i) => ({ id: `a${i}`, time: "07:00", label: "", days: [], on: true }));
+  const reminders = { "2026-12-01": Array.from({ length: 8 }, (_, i) => ({ id: `r${i}`, name: `R${i}`, text: "", time: "09:00" })) };
+  const doc = cleanDoc({ v: 1, state: { habits: [], checks: {}, logs: {}, salah: {}, startBalance: 0, alarms, reminders }, settings: {} });
+  assert.equal(ringingCount(doc.state.alarms, doc.state.reminders), MAX_ALARMS);
+  assert.equal(doc.state.reminders["2026-12-01"].length, 8, "reminders past the limit are kept, without a ring time");
+  const many = Array.from({ length: 70 }, (_, i) => ({ id: `a${i}`, time: "07:00", label: "", days: [], on: true }));
+  assert.equal(cleanDoc({ v: 1, state: { habits: [], checks: {}, logs: {}, salah: {}, startBalance: 0, alarms: many }, settings: {} }).state.alarms.length, 50);
 });

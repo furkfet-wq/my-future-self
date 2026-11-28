@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Extension } from "@tiptap/react";
+import { Plugin } from "@tiptap/pm/state";
 import { ColourMenu } from "./ColourMenu.jsx";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle, Color, FontFamily, FontSize } from "@tiptap/extension-text-style";
 import Highlight from "@tiptap/extension-highlight";
-import { NOTE_FONTS, NOTE_SIZES, NOTE_COLOURS, NOTE_HIGHLIGHTS, NOTE_MAX_BYTES } from "../../shared/doc.js";
+import { NOTE_FONTS, NOTE_SIZES, NOTE_COLOURS, NOTE_HIGHLIGHTS, NOTE_MAX_BYTES, NOTE_MAX_CHARS } from "../../shared/doc.js";
 import "./notepad.css";
 
 const FONT_NAMES = ["Normal", "Serif", "Mono", "Rounded", "Handwriting"];
@@ -57,6 +59,27 @@ const stripPaste = (html) =>
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
     .replace(/\sstyle\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/<img[^>]*>/gi, "");
+
+// Refuses any typing or paste that would take the note past 20,000 letters; nothing already written changes.
+// Deleting, and copies arriving from another device (marked "remote"), always go through.
+const LetterLimit = Extension.create({
+  name: "letterLimit",
+  addOptions: () => ({ onRefused: () => {} }),
+  addProseMirrorPlugins() {
+    const { onRefused } = this.options;
+    return [
+      new Plugin({
+        filterTransaction(tr, state) {
+          if (!tr.docChanged || tr.getMeta("remote")) return true;
+          const len = tr.doc.textContent.length;
+          if (len <= NOTE_MAX_CHARS || len <= state.doc.textContent.length) return true;
+          queueMicrotask(onRefused);
+          return false;
+        },
+      }),
+    ];
+  },
+});
 
 const MENU_W = 300; // colour menu size (see notepad.css .cm)
 const MENU_H = 450;
@@ -129,6 +152,7 @@ export function Notepad({ notes, onNotes, onClose }) {
       FontFamily,
       FontSize,
       Highlight.configure({ multicolor: true }),
+      LetterLimit.configure({ onRefused: () => setMsg(`Your note can have up to ${NOTE_MAX_CHARS.toLocaleString("en-GB")} letters. Delete some to keep writing.`) }),
     ],
     content: notes || "",
     editorProps: { transformPastedHTML: stripPaste, attributes: { "aria-label": "Note", spellcheck: "true" } },
@@ -212,6 +236,7 @@ export function Notepad({ notes, onNotes, onClose }) {
   const ts = editor?.getAttributes("textStyle") || {};
   const hl = editor?.getAttributes("highlight") || {};
   const chain = () => editor.chain().focus();
+  const letters = editor ? editor.state.doc.textContent.length : 0;
 
   // the colour menu opens under its rainbow button (above it when there is no room), always on screen
   const openMenu = (kind, btn) => {
@@ -229,6 +254,11 @@ export function Notepad({ notes, onNotes, onClose }) {
         <span className="np-saved" aria-live="polite">
           {saved ? "Saved" : ""}
         </span>
+        {editor && (
+          <span className={`np-count${letters > NOTE_MAX_CHARS * 0.9 ? " near" : ""}`} title="Letters used">
+            {letters.toLocaleString("en-GB")} / {NOTE_MAX_CHARS.toLocaleString("en-GB")}
+          </span>
+        )}
         <button className="np-icon" onClick={() => setFull((f) => !f)} aria-label={full ? "Normal size" : "Full size"} title={full ? "Normal size" : "Full size"}>
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
             {full ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /> : <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { dateKey, weeksOfMonth, MONTH_NAMES, DAY_SHORT, prettyDate } from "../lib/dates.js";
 import { dayReminders, newReminderId, ringTime, withDay } from "../lib/reminders.js";
-import { REMINDER_NAME_MAX, REMINDER_TEXT_MAX, MAX_REMINDERS } from "../../shared/doc.js";
+import { REMINDER_NAME_MAX, REMINDER_TEXT_MAX, MAX_REMINDERS, MAX_ALARMS, ringingCount } from "../../shared/doc.js";
 import "./calendar.css";
 
 const MONTHS_AHEAD = 12;
@@ -29,10 +29,10 @@ export function CalendarButton({ onClick }) {
 const countAll = (reminders) => Object.values(reminders || {}).reduce((n, l) => n + l.length, 0);
 
 /* One reminder: name, ring time (optional) and text. */
-function ReminderCard({ r, dayKey, onChange, onDelete, autoFocus }) {
+function ReminderCard({ r, dayKey, onChange, onDelete, autoFocus, noRing }) {
   const [asking, setAsking] = useState(false);
   const at = ringTime(dayKey, r);
-  const status = !r.time ? "No ring. Add a time to ring." : at > new Date() ? `Rings at ${r.time}` : `Rang at ${r.time}`;
+  const status = noRing ? `No ring: you have the most alarms allowed (${MAX_ALARMS}), clock alarms included.` : !r.time ? "No ring. Add a time to ring." : at > new Date() ? `Rings at ${r.time}` : `Rang at ${r.time}`;
   return (
     <div className="cal-card">
       <div className="cal-card-top">
@@ -42,7 +42,7 @@ function ReminderCard({ r, dayKey, onChange, onDelete, autoFocus }) {
         </label>
         <label className="cal-field cal-time">
           <span>Ring at</span>
-          <input type="time" value={r.time} onChange={(e) => onChange({ ...r, time: e.target.value })} />
+          <input type="time" value={r.time} disabled={noRing} title={noRing ? `You have the most alarms allowed (${MAX_ALARMS})` : undefined} onChange={(e) => onChange({ ...r, time: e.target.value })} />
         </label>
       </div>
       <label className="cal-field">
@@ -72,7 +72,7 @@ function ReminderCard({ r, dayKey, onChange, onDelete, autoFocus }) {
 }
 
 /* The calendar: this month and the next 12, click a day to add, name and write reminders. */
-export function Calendar({ reminders, onReminders, onClose, startKey }) {
+export function Calendar({ reminders, onReminders, onClose, startKey, alarmCount = 0 }) {
   const today = new Date();
   const todayKey = dateKey(today);
   const [offset, setOffset] = useState(() => {
@@ -87,6 +87,7 @@ export function Calendar({ reminders, onReminders, onClose, startKey }) {
   const weeks = weeksOfMonth(view.getFullYear(), view.getMonth());
 
   const full = countAll(reminders) >= MAX_REMINDERS;
+  const ringing = ringingCount(alarmCount ? Array(alarmCount) : [], reminders); // clock alarms + timed reminders
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -168,7 +169,7 @@ export function Calendar({ reminders, onReminders, onClose, startKey }) {
             {raw.length === 0 && <p className="cal-none">No reminders on this day.</p>}
             <div className="cal-cards">
               {raw.map((r) => (
-                <ReminderCard key={r.id} r={r} dayKey={selected} autoFocus={r.id === fresh} onChange={change} onDelete={() => remove(r.id)} />
+                <ReminderCard key={r.id} r={r} dayKey={selected} autoFocus={r.id === fresh} noRing={!r.time && ringing >= MAX_ALARMS} onChange={change} onDelete={() => remove(r.id)} />
               ))}
             </div>
             <button className="cal-add" onClick={add} disabled={full}>

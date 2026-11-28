@@ -34,6 +34,7 @@ import { Notepad, NotepadButton } from "./components/Notepad.jsx";
 import { Calculator, CalculatorButton } from "./components/Calculator.jsx";
 import { Calendar, CalendarButton } from "./components/Calendar.jsx";
 import { dueReminders } from "./lib/reminders.js";
+import { ringingCount } from "../shared/doc.js";
 import { dueAlarms } from "./lib/clock.js";
 import { alarmStart, alarmStop } from "./lib/sound.js";
 import Account from "./components/Account.jsx";
@@ -409,6 +410,7 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
         <ClockPanel
           alarms={state.alarms || []}
           onAlarms={actions.setAlarms}
+          ringing={ringingCount(state.alarms, state.reminders)}
           timer={timer}
           setTimer={setTimer}
           sw={sw}
@@ -418,7 +420,7 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
       )}
       {notepadOpen && <Notepad notes={state.notes} onNotes={actions.setNotes} onClose={() => setNotepadOpen(false)} />}
       {calcOpen && <Calculator onClose={closeCalc} />}
-      {calendarAt !== null && <Calendar reminders={state.reminders || {}} onReminders={actions.setReminders} onClose={closeCalendar} startKey={calendarAt || undefined} />}
+      {calendarAt !== null && <Calendar reminders={state.reminders || {}} onReminders={actions.setReminders} onClose={closeCalendar} startKey={calendarAt || undefined} alarmCount={(state.alarms || []).length} />}
       {ring && (
         <Ringer
           ring={ring}

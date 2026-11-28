@@ -84,8 +84,8 @@ export function cleanNotes(notes, room = { left: NOTE_MAX_CHARS }) {
   return JSON.stringify(out).length > NOTE_MAX_BYTES ? null : out;
 }
 
-// Notepad tabs: [{ id, name, doc }], at most 10; all tabs together hold at most NOTE_MAX_CHARS letters.
-export const MAX_NOTE_TABS = 10;
+// Notepad tabs: [{ id, name, doc }], at most 25; all tabs together hold at most NOTE_MAX_CHARS letters.
+export const MAX_NOTE_TABS = 25;
 export function cleanNoteTabs(list) {
   const out = [];
   const room = { left: NOTE_MAX_CHARS };

@@ -183,12 +183,12 @@ test("sticky notes are cleaned", async () => {
   assert.deepEqual(cleanStickies([{ id: "a" }, { id: "a" }, "junk"]).length, 1);
 });
 
-test("notepad tabs: at most 10, 100,000 letters for all tabs together", async () => {
+test("notepad tabs: at most 25, 100,000 letters for all tabs together", async () => {
   const { cleanNoteTabs, noteLetters, MAX_NOTE_TABS, NOTE_MAX_CHARS } = await import("./doc.js");
   const doc = (n, ch = "a") => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: ch.repeat(n) }] }] });
   const tabs = cleanNoteTabs([{ id: "a", name: "One", doc: doc(70000) }, { id: "b", name: "x".repeat(50), doc: doc(70000, "b") }, { id: "a", doc: doc(5) }]);
   assert.equal(tabs.length, 2, "duplicate id dropped");
   assert.equal(tabs[1].name.length, 30);
   assert.equal(noteLetters(tabs[0].doc) + noteLetters(tabs[1].doc), NOTE_MAX_CHARS);
-  assert.equal(cleanNoteTabs(Array.from({ length: 14 }, (_, i) => ({ id: `t${i}`, doc: doc(1) }))).length, MAX_NOTE_TABS);
+  assert.equal(cleanNoteTabs(Array.from({ length: 30 }, (_, i) => ({ id: `t${i}`, doc: doc(1) }))).length, MAX_NOTE_TABS);
 });

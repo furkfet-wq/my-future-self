@@ -159,3 +159,11 @@
 
 /* The clock window (alarms, timer, stopwatch) is shown 20% bigger where the screen has room for it */
 @media (min-width: 960px) { .clk-top, .clk-tabs, .clk-body { zoom: 1.2; } }
+
+/* The time always fits inside the ring: the font shrinks with the number of characters (5:00 big, 1:04:46 smaller,
+   2d 01:04:46 smaller still). 72cqi = 72% of the ring's width; one character is about 0.68em wide. */
+.tm-ring { container-type: inline-size; }
+.tm-left-txt { font-size: min(62px, 9vw, calc(72cqi / (var(--len, 5) * 0.68))); }
+.sw-units { max-width: 78cqi; }
+.sw-unit { min-width: 0; }
+.sw-unit b { font-size: min(42px, 6vw, 13cqi); }

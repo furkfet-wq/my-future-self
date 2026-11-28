@@ -300,7 +300,14 @@ function Timer({ timer, setTimer }) {
         </svg>
         <div className="tm-center">
           <span className="tm-label">{timer.label || "Timer"}</span>
-          <div className="tm-left-txt">{fmtDHMS(Math.ceil(left / 1000) * 1000)}</div>
+          {(() => {
+            const txt = fmtDHMS(Math.ceil(left / 1000) * 1000);
+            return (
+              <div className="tm-left-txt" style={{ "--len": txt.length }}>
+                {txt}
+              </div>
+            );
+          })()}
           <span className="tm-sub">{running ? `Ends at ${clockAt(timer.endsAt)}` : "Paused"}</span>
         </div>
       </div>

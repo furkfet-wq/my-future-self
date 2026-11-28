@@ -1,6 +1,15 @@
 /* Sticky notes: Windows Sticky Notes colours and layout (top bar, text, format bar at the bottom) */
-.stk-btn .stk-fold { transition: translate 0.6s var(--rise); }
-.stk-btn:hover .stk-fold { translate: -1px -1px; }
+/* Sticky note button: on hover the paper tilts as if being stuck on, its corner peels up and the lines get written */
+.stk-btn svg { transform-origin: 50% 15%; }
+.stk-btn .stk-fold { transform-origin: 19.5px 19.5px; transition: translate 0.6s var(--rise), scale 0.6s var(--rise); }
+.stk-btn .stk-lines { stroke-dasharray: 9; stroke-dashoffset: 0; }
+.stk-btn:not(:disabled):hover svg { animation: stk-stick 0.9s var(--rise); }
+.stk-btn:not(:disabled):hover .stk-fold { scale: 1.35; }
+.stk-btn:not(:disabled):hover .stk-lines { animation: stk-write 1s ease-out 0.15s backwards; }
+@keyframes stk-stick { 0% { rotate: 0deg; } 30% { rotate: -12deg; translate: 0 -2px; } 60% { rotate: 5deg; } 80% { rotate: -2deg; } 100% { rotate: 0deg; } }
+@keyframes stk-write { from { stroke-dashoffset: 9; } }
+@media (prefers-reduced-motion: reduce) { .stk-btn:hover svg, .stk-btn:hover .stk-lines { animation: none; } }
+
 
 /* one layer at the top-left of the page; notes inside are placed in page pixels. Its z-index keeps every note
    under the notepad (140), clock and calendar (150) and the alarm (400). */
@@ -81,3 +90,7 @@
 .stk-ask .stk-del:hover { background: #a32416; }
 
 @media (prefers-reduced-motion: reduce) { .stk, .stk-menu { animation: none; } }
+
+/* at the limit (50 notes): the new-note buttons grey out (their tooltip says why) */
+.tool-btn.stk-btn:disabled { opacity: 0.3; cursor: not-allowed; translate: none; box-shadow: none; border-color: var(--line); }
+.stk-icon:disabled { opacity: 0.25 !important; cursor: not-allowed; background: none !important; }

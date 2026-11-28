@@ -33,12 +33,12 @@ export function StickyButton({ onClick, disabled }) {
       onClick={onClick}
       disabled={disabled}
       aria-label="New sticky note"
-      title={disabled ? `You have ${MAX_STICKIES} sticky notes (the most)` : "Sticky note"}
+      title={disabled ? `You have ${MAX_STICKIES} sticky notes (the most). Delete one to add another.` : "Sticky note"}
     >
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path d="M4.5 4.5h15v10l-5 5h-10z" />
         <path className="stk-fold" d="M19.5 14.5h-5v5" />
-        <path d="M8 9h8M8 12.5h5" />
+        <path className="stk-lines" d="M8 9h8M8 12.5h5" />
       </svg>
     </button>
   );
@@ -59,7 +59,7 @@ function Icon({ d, size = 16 }) {
   );
 }
 
-function StickyNote({ note, z, fresh, onFront, onChange, onAdd, onDelete }) {
+function StickyNote({ note, z, fresh, canAdd, onFront, onChange, onAdd, onDelete }) {
   const [box, setBox] = useState(null); // position/size while dragging or resizing (saved when you let go)
   const [menu, setMenu] = useState(false);
   const [asking, setAsking] = useState(false);
@@ -163,7 +163,7 @@ function StickyNote({ note, z, fresh, onFront, onChange, onAdd, onDelete }) {
       aria-label="Sticky note"
     >
       <div className="stk-bar" onPointerDown={(e) => drag(e, "move")}>
-        <button className="stk-icon" onClick={onAdd} aria-label="New note" title="New note">
+        <button className="stk-icon" onClick={onAdd} disabled={!canAdd} aria-label="New note" title={canAdd ? "New note" : `You have ${MAX_STICKIES} sticky notes (the most). Delete one to add another.`}>
           <Icon d="M12 5v14M5 12h14" />
         </button>
         <span className="stk-grip" aria-hidden="true" />
@@ -248,6 +248,7 @@ export function StickyNotes({ notes, onNotes, freshId }) {
           note={n}
           z={order.includes(n.id) ? 40 + order.indexOf(n.id) : 1 + i} // inside the layer: clicked notes come to the front
           fresh={n.id === freshId}
+          canAdd={notes.length < MAX_STICKIES}
           onFront={() => front(n.id)}
           onChange={(patch) => update(n.id, patch)}
           onAdd={() => add(n)}

@@ -126,7 +126,7 @@ export function cleanReminders(days, ringRoom = MAX_ALARMS) {
 // Sticky notes on the page: [{ id, x, y, w, h, color, doc }] (x / y in page pixels, doc = rich text).
 // Text: paragraphs and bullet lists; bold, italic, underline, strikethrough. Nothing else is kept.
 export const STICKY_COLOURS = ["yellow", "green", "pink", "purple", "blue", "gray", "charcoal"];
-export const MAX_STICKIES = 30;
+export const MAX_STICKIES = 50;
 export const STICKY_MAX_CHARS = 5000;
 const STICKY_MARKS = ["bold", "italic", "underline", "strike"];
 function cleanStickyInline(node, room) {

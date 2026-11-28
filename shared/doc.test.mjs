@@ -179,6 +179,6 @@ test("sticky notes are cleaned", async () => {
   ] } });
   const long = cleanStickies([{ id: "a", doc: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "x".repeat(9000) }] }] } }]);
   assert.equal(long[0].doc.content[0].content[0].text.length, 5000);
-  assert.equal(cleanStickies(Array.from({ length: 40 }, (_, i) => ({ id: `n${i}` }))).length, MAX_STICKIES);
+  assert.equal(cleanStickies(Array.from({ length: 60 }, (_, i) => ({ id: `n${i}` }))).length, MAX_STICKIES);
   assert.deepEqual(cleanStickies([{ id: "a" }, { id: "a" }, "junk"]).length, 1);
 });

@@ -4,6 +4,7 @@ import { useGSAP } from "@gsap/react";
 import { dateKey } from "../lib/dates.js";
 import { rangeData, firstDataKey, shiftKey, fmtMoney, fmtMins } from "../lib/week.js";
 import { SALAH, MAIN } from "../lib/prayer.js";
+import { habitsFor } from "../lib/habits.js";
 import { WeekDotLine, WeekRisingBars, WeekStatLine, TABS } from "./ExtraCharts.jsx";
 
 const RANGES = [
@@ -27,18 +28,27 @@ function DayDetail({ state, d, onEdit, muslim }) {
     { scope: ref }
   );
   const checks = state.checks[d.key] || {};
+  const prayed = state.salah?.[d.key] || {};
+  const habits = habitsFor(state.habits, d.key); // the habits this day's month had
+  const row = (id, name, done, doneText = "Done", notText = "Not done") => (
+    <div className="ad-hab" key={id}>
+      <span className={`ad-box${done ? " done" : ""}`}>{done && <svg className="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}</span>
+      <span>{name}</span>
+      <em>{done ? doneText : notText}</em>
+    </div>
+  );
   return (
     <div className="ad-detail" ref={ref}>
       <div className="ad-detail-in">
         <div className="ad-habs">
-          {state.habits.length === 0 && <p className="ad-dim">No habits yet.</p>}
-          {state.habits.map((h) => (
-            <div className="ad-hab" key={h.id}>
-              <span className={`ad-box${checks[h.id] ? " done" : ""}`}>{checks[h.id] && <svg className="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}</span>
-              <span>{h.name}</span>
-              <em>{checks[h.id] ? "Done" : "Not done"}</em>
-            </div>
-          ))}
+          {habits.length === 0 && <p className="ad-dim">No habits yet.</p>}
+          {habits.map((h) => row(h.id, h.name, !!checks[h.id]))}
+          {muslim && (
+            <>
+              <p className="ad-sub">Salah</p>
+              {SALAH.map((p) => row(`salah-${p.id}`, p.optional ? `${p.name} (optional)` : p.name, !!prayed[p.id], "Prayed", "Not prayed"))}
+            </>
+          )}
         </div>
         <dl className="ad-facts">
           <div><dt>Habits done</dt><dd>{d.done}/{d.total} ({d.pct}%)</dd></div>

@@ -3,13 +3,15 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { weeksOfMonth, dateKey, DAY_SHORT } from "../lib/dates.js";
 import { sfx } from "../lib/sound.js";
+import { habitsFor } from "../lib/habits.js";
 
 // Used for habits (editable) and for salah (fixed rows, rowInfo adds times / "optional").
 export default function HabitGrid({
   state, year, month0, selectedKey, ready, actions, onSelect,
   rows, checks: checksProp, editable = true, label = "Habits", rowInfo, compact = false,
 }) {
-  const list = rows || state.habits;
+  const monthKey = `${year}-${String(month0 + 1).padStart(2, "0")}`;
+  const list = rows || habitsFor(state.habits, monthKey); // a month shows only habits added in or before it
   const checks = checksProp || state.checks;
   const root = useRef(null);
   const [newName, setNewName] = useState("");
@@ -86,7 +88,7 @@ export default function HabitGrid({
   function submitHabit(e) {
     e.preventDefault();
     if (!newName.trim()) return;
-    actions.addHabit(newName);
+    actions.addHabit(newName, monthKey); // new habit: from this month on, never in older months
     sfx.add();
     setNewName("");
     // slide the new row in after React renders it
@@ -151,7 +153,7 @@ export default function HabitGrid({
       setDropAt(null);
       if (!dragging) return setEditId(id);
       if (target !== r) {
-        actions.moveHabit(r, target);
+        actions.moveHabit(state.habits.indexOf(list[r]), state.habits.indexOf(list[target])); // positions in the full list
         sfx.done();
       }
     }

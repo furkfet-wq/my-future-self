@@ -1,5 +1,6 @@
 import { dateKey, mondayIndex } from "./dates.js";
 import { MAIN } from "./prayer.js";
+import { habitsFor } from "./habits.js";
 
 export const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 export const DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -22,8 +23,9 @@ export function weekOf(key) {
 }
 
 export function dayStats(state, key) {
-  const total = state.habits.length;
-  const ids = new Set(state.habits.map((h) => h.id));
+  const habits = habitsFor(state.habits, key); // only habits that existed in this day's month
+  const total = habits.length;
+  const ids = new Set(habits.map((h) => h.id));
   const day = state.checks[key] || {};
   const done = Object.keys(day).filter((id) => day[id] && ids.has(id)).length;
   const log = state.logs[key] || {};
@@ -85,13 +87,12 @@ export function rangeData(state, fromKey, toKey) {
 
 // Days in a row (ending today) where every habit was done. Today not finished yet does not break it.
 export function streak(state, todayKey) {
-  const total = state.habits.length;
-  if (!total) return 0;
+  if (!state.habits.length) return 0;
   let key = todayKey;
   let n = 0;
   for (let i = 0; i < 3650; i++) {
-    const s = dayStats(state, key);
-    if (s.done === total) n++;
+    const s = dayStats(state, key); // each day against the habits of its own month
+    if (s.total && s.done === s.total) n++;
     else if (i > 0) break;
     key = shiftKey(key, -1);
   }

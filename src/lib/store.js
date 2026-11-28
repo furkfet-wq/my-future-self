@@ -64,7 +64,8 @@ function reducer(state, action) {
     case "addHabit": {
       const name = action.name.trim();
       if (!name) return state;
-      return { ...state, habits: [...state.habits, { id: uid(), name }] };
+      const since = /^\d{4}-\d{2}$/.test(action.since || "") ? action.since : undefined; // month it was added in (see habits.js)
+      return { ...state, habits: [...state.habits, since ? { id: uid(), name, since } : { id: uid(), name }] };
     }
     case "deleteHabit": {
       const checks = {};
@@ -136,7 +137,7 @@ export function useStore() {
 
   const actions = {
     toggle: (key, id) => dispatch({ type: "toggle", key, id }),
-    addHabit: (name) => dispatch({ type: "addHabit", name }),
+    addHabit: (name, since) => dispatch({ type: "addHabit", name, since }),
     deleteHabit: (id) => dispatch({ type: "deleteHabit", id }),
     renameHabit: (id, name) => dispatch({ type: "renameHabit", id, name }),
     moveHabit: (from, to) => dispatch({ type: "moveHabit", from, to }),

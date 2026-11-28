@@ -9,6 +9,8 @@
 //   startBalance: number
 // }
 
+import { habitsFor } from "./habits.js";
+
 const pad = (n) => String(n).padStart(2, "0");
 const KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -60,13 +62,14 @@ export function totalBalance(state) {
  * mood[].dow, money.daily[].dow, habits[] keep the order of state.habits.
  */
 export function computeStats(state, year, month0) {
-  const { habits, checks, logs, startBalance } = parts(state);
+  const { habits: allHabits, checks, logs, startBalance } = parts(state);
 
   // Normalise year/month (month0 = 12 -> January of next year, etc.).
   const first = new Date(Number(year) || 0, Number(month0) || 0, 1);
   const y = first.getFullYear();
   const m0 = first.getMonth();
   const dim = new Date(y, m0 + 1, 0).getDate();
+  const habits = habitsFor(allHabits, `${y}-${pad(m0 + 1)}`); // only habits that existed in this month
   const total = habits.length;
   const ids = habits.map((h) => h.id);
 

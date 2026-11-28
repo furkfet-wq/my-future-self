@@ -72,3 +72,17 @@ test("stopwatch time in days, hours, minutes, seconds", () => {
   assert.equal(fmtDHMS(3_725_000), "01:02:05");
   assert.equal(fmtDHMS(90_061_000), "1d 01:01:01");
 });
+
+import { habitsFor } from "./habits.js";
+import { dayStats, streak } from "./week.js";
+test("a habit added in December is not in November", () => {
+  const habits = [{ id: "old", name: "Old" }, { id: "dec", name: "New", since: "2026-12" }];
+  assert.deepEqual(habitsFor(habits, "2026-11-30").map((h) => h.id), ["old"]);
+  assert.deepEqual(habitsFor(habits, "2026-12-01").map((h) => h.id), ["old", "dec"]);
+  assert.deepEqual(habitsFor(habits, "2027-03").map((h) => h.id), ["old", "dec"]);
+  const state = { habits, checks: { "2026-11-30": { old: true } }, logs: {}, salah: {} };
+  const nov = dayStats(state, "2026-11-30");
+  assert.deepEqual([nov.done, nov.total, nov.pct], [1, 1, 100], "November: 1 of 1");
+  assert.equal(dayStats(state, "2026-12-01").total, 2);
+  assert.equal(streak(state, "2026-11-30"), 1);
+});

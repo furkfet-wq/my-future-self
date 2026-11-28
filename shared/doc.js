@@ -214,7 +214,8 @@ export function cleanDoc(doc) {
   const habits = (Array.isArray(s.habits) ? s.habits : [])
     .filter((h) => isObj(h) && typeof h.id === "string" && h.id && h.id.length <= 64 && typeof h.name === "string" && h.name.trim())
     .slice(0, MAX_HABITS)
-    .map((h) => ({ id: h.id, name: h.name.trim().slice(0, 60) }));
+    // since = the month the habit was added in ("YYYY-MM"); it never shows in older months
+    .map((h) => (/^\d{4}-(0[1-9]|1[0-2])$/.test(h.since) ? { id: h.id, name: h.name.trim().slice(0, 60), since: h.since } : { id: h.id, name: h.name.trim().slice(0, 60) }));
   const settings = {};
   const raw = isObj(doc.settings) ? doc.settings : {};
   for (const k of SETTING_FLAGS) if (typeof raw[k] === "boolean") settings[k] = raw[k];

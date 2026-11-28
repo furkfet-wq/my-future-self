@@ -88,3 +88,6 @@
 .sw-laps li span { color: var(--dim); }
 .sw-laps li em { font-style: normal; color: var(--dim); }
 
+
+/* The clock window (alarms, timer, stopwatch) is shown 20% bigger where the screen has room for it */
+@media (min-width: 960px) { .clk-top, .clk-tabs, .clk-body { zoom: 1.2; } }

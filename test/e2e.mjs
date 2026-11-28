@@ -3,7 +3,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { W, startWorker, stopWorker, googleToken, req, cookieOf, signIn } from "./harness.mjs";
 
-before(startWorker);
+before(() => startWorker()); // default (small) daily limits
 after(stopWorker);
 
 // ---- Task 1 ----

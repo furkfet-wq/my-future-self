@@ -20,6 +20,7 @@ function seed() {
     alarms: [],
     reminders: {},
     stickies: [],
+    noteTabs: [],
   };
 }
 
@@ -46,6 +47,7 @@ function clean(s) {
     alarms: Array.isArray(s.alarms) ? s.alarms : [],
     reminders: s.reminders && typeof s.reminders === "object" && !Array.isArray(s.reminders) ? s.reminders : {},
     stickies: Array.isArray(s.stickies) ? s.stickies : [],
+    noteTabs: Array.isArray(s.noteTabs) ? s.noteTabs : [],
   };
 }
 
@@ -109,6 +111,8 @@ function reducer(state, action) {
     }
     case "setNotes":
       return { ...state, notes: action.notes };
+    case "setNoteTabs": // the old single note now lives in the tabs
+      return { ...state, noteTabs: action.tabs, notes: null };
     case "setStickies":
       return { ...state, stickies: action.stickies };
     case "setReminders":
@@ -149,6 +153,7 @@ export function useStore() {
     setAlarms: (alarms) => dispatch({ type: "setAlarms", alarms }),
     setReminders: (reminders) => dispatch({ type: "setReminders", reminders }),
     setStickies: (stickies) => dispatch({ type: "setStickies", stickies }),
+    setNoteTabs: (tabs) => dispatch({ type: "setNoteTabs", tabs }),
   };
   return [state, actions];
 }

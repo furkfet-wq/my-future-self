@@ -46,7 +46,7 @@ test("write, read and clear the local copy", async () => {
   writeLocalDoc(remote, "A");
   assert.equal(localStorage.getItem(OWNER_KEY), "A");
   const { DEFAULT_SETTINGS } = await import("./startup.js");
-  assert.deepEqual(readLocalDoc(), { v: 1, state: { ...full, notes: null, alarms: [], reminders: {}, stickies: [] }, settings: DEFAULT_SETTINGS });
+  assert.deepEqual(readLocalDoc(), { v: 1, state: { ...full, notes: null, alarms: [], reminders: {}, stickies: [], noteTabs: [] }, settings: DEFAULT_SETTINGS });
   localStorage.setItem(DIRTY_KEY, "1");
   clearLocal();
   for (const k of [STORAGE_KEY, SETTINGS_KEY, OWNER_KEY, DIRTY_KEY]) assert.equal(localStorage.getItem(k), null);

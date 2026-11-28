@@ -442,7 +442,14 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
           onClose={() => setClockOpen(false)}
         />
       )}
-      {notepadOpen && <Notepad notes={state.notes} onNotes={actions.setNotes} onClose={() => setNotepadOpen(false)} />}
+      {notepadOpen && (
+        <Notepad
+          // before tabs there was one note: it shows as tab 1 until the first change saves the tabs
+          tabs={state.noteTabs?.length ? state.noteTabs : [{ id: "note1", name: "Note 1", doc: state.notes || null }]}
+          onTabs={actions.setNoteTabs}
+          onClose={() => setNotepadOpen(false)}
+        />
+      )}
       {calcOpen && <Calculator onClose={closeCalc} />}
       {ready && <StickyNotes notes={stickies} onNotes={setStickies} freshId={freshSticky} />}
       {calendarAt !== null && <Calendar reminders={state.reminders || {}} onReminders={actions.setReminders} onClose={closeCalendar} startKey={calendarAt || undefined} alarmCount={(state.alarms || []).length} />}

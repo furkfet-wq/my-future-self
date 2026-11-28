@@ -101,9 +101,9 @@ test("notes keep only allowed nodes and marks", () => {
   });
 });
 
-test("long notes are cut to 50,000 letters; missing notes are null", () => {
+test("long notes are cut to 100,000 letters; missing notes are null", () => {
   const big = { type: "doc", content: [para(txt("x".repeat(300_001)))] };
-  assert.equal(withState({ notes: big }).state.notes.content[0].content[0].text.length, 50_000);
+  assert.equal(withState({ notes: big }).state.notes.content[0].content[0].text.length, 100_000);
   assert.equal(cleanDoc(good()).state.notes, null);
   assert.equal(withState({ notes: { type: "nope" } }).state.notes, null);
 });
@@ -148,11 +148,11 @@ test("notes keep colour-menu colours only as exact #rrggbb", async () => {
   }
 });
 
-test("notes stop at 50,000 letters; at most 50 things ring (alarms + timed reminders)", async () => {
+test("notes stop at 100,000 letters; at most 50 things ring (alarms + timed reminders)", async () => {
   const { cleanNotes, ringingCount, MAX_ALARMS } = await import("./doc.js");
   const para = (text) => ({ type: "paragraph", content: [{ type: "text", text }] });
-  const n = cleanNotes({ type: "doc", content: [para("a".repeat(45000)), para("b".repeat(8000)), para("c")] });
-  assert.equal(n.content[0].content[0].text.length, 45000);
+  const n = cleanNotes({ type: "doc", content: [para("a".repeat(95000)), para("b".repeat(8000)), para("c")] });
+  assert.equal(n.content[0].content[0].text.length, 95000);
   assert.equal(n.content[1].content[0].text.length, 5000);
   assert.deepEqual(n.content[2], { type: "paragraph" });
   const alarms = Array.from({ length: 45 }, (_, i) => ({ id: `a${i}`, time: "07:00", label: "", days: [], on: true }));
@@ -181,4 +181,14 @@ test("sticky notes are cleaned", async () => {
   assert.equal(long[0].doc.content[0].content[0].text.length, 5000);
   assert.equal(cleanStickies(Array.from({ length: 60 }, (_, i) => ({ id: `n${i}` }))).length, MAX_STICKIES);
   assert.deepEqual(cleanStickies([{ id: "a" }, { id: "a" }, "junk"]).length, 1);
+});
+
+test("notepad tabs: at most 10, 100,000 letters for all tabs together", async () => {
+  const { cleanNoteTabs, noteLetters, MAX_NOTE_TABS, NOTE_MAX_CHARS } = await import("./doc.js");
+  const doc = (n, ch = "a") => ({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: ch.repeat(n) }] }] });
+  const tabs = cleanNoteTabs([{ id: "a", name: "One", doc: doc(70000) }, { id: "b", name: "x".repeat(50), doc: doc(70000, "b") }, { id: "a", doc: doc(5) }]);
+  assert.equal(tabs.length, 2, "duplicate id dropped");
+  assert.equal(tabs[1].name.length, 30);
+  assert.equal(noteLetters(tabs[0].doc) + noteLetters(tabs[1].doc), NOTE_MAX_CHARS);
+  assert.equal(cleanNoteTabs(Array.from({ length: 14 }, (_, i) => ({ id: `t${i}`, doc: doc(1) }))).length, MAX_NOTE_TABS);
 });

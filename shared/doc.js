@@ -23,8 +23,8 @@ export const NOTE_FONTS = ["Archivo", "Georgia, serif", "ui-monospace, monospace
 export const NOTE_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px"];
 export const NOTE_COLOURS = ["#ffffff", "#ff5c5c", "#ffa24c", "#ffd84c", "#6ee07a", "#4cc3ff", "#7a8cff", "#c77dff", "#ff7ac8"];
 export const NOTE_HIGHLIGHTS = ["#ffd84c", "#6ee07a", "#4cc3ff", "#ff7ac8", "#ffa24c", "#ffffff"];
-export const NOTE_MAX_BYTES = 300_000;
-export const NOTE_MAX_CHARS = 50_000; // letters in the notepad (spaces count, new lines do not)
+export const NOTE_MAX_BYTES = 600_000; // one note as saved (text + styling)
+export const NOTE_MAX_CHARS = 100_000; // letters in the notepad, all tabs together (spaces count, new lines do not)
 // Things that ring, wherever they were made: clock alarms + calendar reminders that have a ring time.
 export const MAX_ALARMS = 50;
 export const ringingCount = (alarms, reminders) =>
@@ -63,18 +63,18 @@ function cleanInline(node) {
   return marks.length ? { type: "text", text: node.text, marks } : { type: "text", text: node.text };
 }
 
-export function cleanNotes(notes) {
+// `room.left` = letters still allowed; shared by all notepad tabs, so text past the total limit is cut off.
+export function cleanNotes(notes, room = { left: NOTE_MAX_CHARS }) {
   if (!isObj(notes) || notes.type !== "doc" || !Array.isArray(notes.content)) return null;
   const content = [];
-  let room = NOTE_MAX_CHARS; // text past 50,000 letters is cut off
   for (const block of notes.content) {
     if (!isObj(block) || block.type !== "paragraph") continue;
     const inner = [];
     for (const node of (Array.isArray(block.content) ? block.content : []).map(cleanInline).filter(Boolean)) {
       if (node.type === "text") {
-        if (room <= 0) continue;
-        if (node.text.length > room) node.text = node.text.slice(0, room);
-        room -= node.text.length;
+        if (room.left <= 0) continue;
+        if (node.text.length > room.left) node.text = node.text.slice(0, room.left);
+        room.left -= node.text.length;
       }
       inner.push(node);
     }
@@ -83,6 +83,25 @@ export function cleanNotes(notes) {
   const out = { type: "doc", content };
   return JSON.stringify(out).length > NOTE_MAX_BYTES ? null : out;
 }
+
+// Notepad tabs: [{ id, name, doc }], at most 10; all tabs together hold at most NOTE_MAX_CHARS letters.
+export const MAX_NOTE_TABS = 10;
+export function cleanNoteTabs(list) {
+  const out = [];
+  const room = { left: NOTE_MAX_CHARS };
+  for (const t of Array.isArray(list) ? list : []) {
+    if (out.length >= MAX_NOTE_TABS) break;
+    if (!isObj(t) || typeof t.id !== "string" || !t.id || t.id.length > 24 || out.some((o) => o.id === t.id)) continue;
+    out.push({ id: t.id, name: typeof t.name === "string" ? t.name.slice(0, 30) : "", doc: cleanNotes(t.doc, room) });
+  }
+  return out;
+}
+// letters in a note (what the limit counts: text only, new lines do not count)
+export const noteLetters = (doc) =>
+  (isObj(doc) && Array.isArray(doc.content) ? doc.content : []).reduce(
+    (n, b) => n + (Array.isArray(b?.content) ? b.content : []).reduce((m, x) => m + (typeof x?.text === "string" ? x.text.length : 0), 0),
+    0
+  );
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 export function cleanAlarms(list) {
@@ -234,7 +253,8 @@ export function cleanDoc(doc) {
       logs: cleanLogs(s.logs),
       salah: cleanTicks(s.salah),
       startBalance: typeof s.startBalance === "number" && Number.isFinite(s.startBalance) ? s.startBalance : 0,
-      notes: cleanNotes(s.notes),
+      notes: cleanNotes(s.notes), // before tabs: the one note (moved into tab 1 by the app)
+      noteTabs: cleanNoteTabs(s.noteTabs),
       alarms,
       reminders: cleanReminders(s.reminders, MAX_ALARMS - alarms.length),
       stickies: cleanStickies(s.stickies),

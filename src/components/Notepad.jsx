@@ -7,7 +7,10 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle, Color, FontFamily, FontSize } from "@tiptap/extension-text-style";
 import Highlight from "@tiptap/extension-highlight";
-import { NOTE_FONTS, NOTE_SIZES, NOTE_COLOURS, NOTE_HIGHLIGHTS, NOTE_MAX_BYTES, NOTE_MAX_CHARS } from "../../shared/doc.js";
+import { NOTE_FONTS, NOTE_SIZES, NOTE_COLOURS, NOTE_HIGHLIGHTS, NOTE_MAX_BYTES, NOTE_MAX_CHARS, MAX_NOTE_TABS, noteLetters } from "../../shared/doc.js";
+const TAB_KEY = "mfs-notepad-tab-v1"; // the open tab (this browser only)
+const newTabId = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const EMPTY = { type: "doc", content: [{ type: "paragraph" }] };
 import "./notepad.css";
 
 const FONT_NAMES = ["Normal", "Serif", "Mono", "Rounded", "Handwriting"];
@@ -60,19 +63,19 @@ const stripPaste = (html) =>
     .replace(/\sstyle\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/<img[^>]*>/gi, "");
 
-// Refuses any typing or paste that would take the note past 50,000 letters; nothing already written changes.
-// Deleting, and copies arriving from another device (marked "remote"), always go through.
+// Refuses any typing or paste that would take ALL tabs together past 100,000 letters (getOther = letters in the
+// other tabs); nothing already written changes. Deleting always goes through.
 const LetterLimit = Extension.create({
   name: "letterLimit",
-  addOptions: () => ({ onRefused: () => {} }),
+  addOptions: () => ({ onRefused: () => {}, getOther: () => 0 }),
   addProseMirrorPlugins() {
-    const { onRefused } = this.options;
+    const { onRefused, getOther } = this.options;
     return [
       new Plugin({
         filterTransaction(tr, state) {
           if (!tr.docChanged || tr.getMeta("remote")) return true;
           const len = tr.doc.textContent.length;
-          if (len <= NOTE_MAX_CHARS || len <= state.doc.textContent.length) return true;
+          if (len + getOther() <= NOTE_MAX_CHARS || len <= state.doc.textContent.length) return true;
           queueMicrotask(onRefused);
           return false;
         },
@@ -111,7 +114,22 @@ const Group = ({ label, children }) => (
 );
 
 /* The notepad window: black, white text, covers 80% of the screen; move, resize, full size, close. */
-export function Notepad({ notes, onNotes, onClose }) {
+export function Notepad({ tabs, onTabs, onClose }) {
+  // ---- tabs: up to 10, each with a name; the open one is remembered in this browser ----
+  const [active, setActiveState] = useState(() => {
+    const saved = localStorage.getItem(TAB_KEY);
+    return tabs.some((t) => t.id === saved) ? saved : tabs[0]?.id;
+  });
+  const tab = tabs.find((t) => t.id === active) || tabs[0];
+  const notes = tab?.doc || null;
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
+  const otherLetters = useRef(0);
+  otherLetters.current = tabs.reduce((n, t) => (t.id === tab?.id ? n : n + noteLetters(t.doc)), 0);
+  const focusNew = useRef(false); // a new tab's editor gets the cursor when it is ready
+  const createdFor = tab?.id; // the tab the editor below is made for (it is made again when the tab changes)
+  const editorTab = useRef(null); // the tab the editor on screen belongs to
+  const writeTab = (id, doc) => onTabs(tabsRef.current.map((t) => (t.id === id ? { ...t, doc } : t)));
   const [win, setWinState] = useState(loadWin);
   const [full, setFull] = useState(false);
   const [saved, setSaved] = useState(true);
@@ -119,8 +137,6 @@ export function Notepad({ notes, onNotes, onClose }) {
   const closeMenu = useCallback(() => setMenu(null), []);
   const [msg, setMsg] = useState("");
   const [, force] = useState(0);
-  const onNotesRef = useRef(onNotes);
-  onNotesRef.current = onNotes;
   const lastSent = useRef(null); // the editor content last handed to the app (JSON string)
   const setWin = (v) => {
     const next = fit(v);
@@ -152,7 +168,10 @@ export function Notepad({ notes, onNotes, onClose }) {
       FontFamily,
       FontSize,
       Highlight.configure({ multicolor: true }),
-      LetterLimit.configure({ onRefused: () => setMsg(`Your note can have up to ${NOTE_MAX_CHARS.toLocaleString("en-GB")} letters. Delete some to keep writing.`) }),
+      LetterLimit.configure({
+        getOther: () => otherLetters.current,
+        onRefused: () => setMsg(`All your tabs together can have up to ${NOTE_MAX_CHARS.toLocaleString("en-GB")} letters. Delete some to keep writing.`),
+      }),
     ],
     content: notes || "",
     editorProps: { transformPastedHTML: stripPaste, attributes: { "aria-label": "Note", spellcheck: "true" } },
@@ -165,20 +184,26 @@ export function Notepad({ notes, onNotes, onClose }) {
       }
       setMsg("");
       lastSent.current = JSON.stringify(json);
-      onNotesRef.current(json); // saved in this browser at once, online 2 s later
+      writeTab(createdFor, json); // into the tab this editor was made for (saved here at once, online 2 s later)
       setSaved(true);
     },
     onCreate: ({ editor: ed }) => {
+      editorTab.current = createdFor;
       lastSent.current = JSON.stringify(ed.getJSON());
+      if (focusNew.current) {
+        focusNew.current = false;
+        ed.commands.focus("end");
+      }
     },
     onSelectionUpdate: () => force((n) => n + 1),
     onTransaction: () => force((n) => n + 1),
-  });
+  }, [tab?.id]); // a fresh editor for each tab: its own text and its own Undo
 
   // A newer copy from another device arrived. Show it, even with the cursor in the notepad, unless this editor has
   // text the app has not been given yet (then that text is kept and handed over, so screen and saved copy agree).
   useEffect(() => {
-    if (!editor) return;
+    // right after switching tabs the old editor is still here for a moment: never mix two tabs
+    if (!editor || editor.isDestroyed || editorTab.current !== tab?.id) return;
     const shown = JSON.stringify(editor.getJSON());
     const incoming = notes || { type: "doc", content: [{ type: "paragraph" }] };
     if (shown === JSON.stringify(incoming)) return;
@@ -189,7 +214,7 @@ export function Notepad({ notes, onNotes, onClose }) {
       if (editor.isFocused) editor.commands.setTextSelection(Math.min(from, editor.state.doc.content.size));
     } else {
       lastSent.current = shown;
-      onNotesRef.current(editor.getJSON());
+      writeTab(tab.id, editor.getJSON());
     }
   }, [notes, editor]);
 
@@ -236,7 +261,40 @@ export function Notepad({ notes, onNotes, onClose }) {
   const ts = editor?.getAttributes("textStyle") || {};
   const hl = editor?.getAttributes("highlight") || {};
   const chain = () => editor.chain().focus();
-  const letters = editor ? editor.state.doc.textContent.length : 0;
+  const letters = (editor ? editor.state.doc.textContent.length : 0) + otherLetters.current; // all tabs together
+
+  // ---- tabs ----
+  const [renaming, setRenaming] = useState(null); // id of the tab whose name is being typed
+  const [closing, setClosing] = useState(null); // id of the tab asking "Delete?"
+  const setActive = (id) => {
+    setActiveState(id);
+    try {
+      localStorage.setItem(TAB_KEY, id);
+    } catch {
+      /* ignore */
+    }
+  };
+  // show another tab: the editor is made fresh for it (see useEditor deps), so its text and its Undo stay its own
+  const openTab = (id) => {
+    setActive(id);
+    setMsg("");
+  };
+  const addTab = () => {
+    if (tabs.length >= MAX_NOTE_TABS) return;
+    const t = { id: newTabId(), name: `Note ${tabs.length + 1}`, doc: EMPTY };
+    onTabs([...tabs, t]);
+    focusNew.current = true;
+    openTab(t.id);
+  };
+  const renameTab = (id, name) => onTabs(tabs.map((t) => (t.id === id ? { ...t, name: name.slice(0, 30) } : t)));
+  const closeTab = (id) => {
+    const i = tabs.findIndex((t) => t.id === id);
+    const next = tabs.filter((t) => t.id !== id);
+    if (!next.length) next.push({ id: newTabId(), name: "Note 1", doc: EMPTY }); // always at least one tab
+    onTabs(next);
+    setClosing(null);
+    if (id === tab?.id) openTab(next[Math.max(0, i - 1)].id);
+  };
 
   // the colour menu opens under its rainbow button (above it when there is no room), always on screen
   const openMenu = (kind, btn) => {
@@ -266,6 +324,54 @@ export function Notepad({ notes, onNotes, onClose }) {
         </button>
         <button className="np-icon" onClick={onClose} aria-label="Close notepad" title="Close">
           ×
+        </button>
+      </div>
+
+      <div className="np-tabs" role="tablist" aria-label="Notepad tabs">
+        {tabs.map((t, i) => {
+          const on = t.id === tab?.id;
+          const name = t.name || `Note ${i + 1}`;
+          if (closing === t.id)
+            return (
+              <span key={t.id} className="np-tab asking">
+                Delete “{name}”?
+                <button className="np-tab-yes" onClick={() => closeTab(t.id)}>
+                  Delete
+                </button>
+                <button onClick={() => setClosing(null)}>Keep</button>
+              </span>
+            );
+          return (
+            <span key={t.id} className={`np-tab${on ? " on" : ""}`}>
+              {renaming === t.id ? (
+                <input
+                  className="np-tab-name"
+                  defaultValue={t.name}
+                  maxLength={30}
+                  autoFocus
+                  aria-label="Tab name"
+                  onFocus={(e) => e.target.select()}
+                  onBlur={(e) => (renameTab(t.id, e.target.value.trim() || name), setRenaming(null))}
+                  onKeyDown={(e) => (e.key === "Enter" || e.key === "Escape") && e.currentTarget.blur()}
+                />
+              ) : (
+                <button role="tab" aria-selected={on} className="np-tab-btn" onClick={() => !on && openTab(t.id)} onDoubleClick={() => setRenaming(t.id)} title="Double-click to rename">
+                  {name}
+                </button>
+              )}
+              <button
+                className="np-tab-x"
+                aria-label={`Close ${name}`}
+                title="Close tab"
+                onClick={() => (noteLetters(on && editor ? editor.getJSON() : t.doc) ? setClosing(t.id) : closeTab(t.id))}
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
+        <button className="np-tab-add" onClick={addTab} disabled={tabs.length >= MAX_NOTE_TABS} aria-label="New tab" title={tabs.length >= MAX_NOTE_TABS ? `You have ${MAX_NOTE_TABS} tabs (the most)` : "New tab"}>
+          +
         </button>
       </div>
 

@@ -45,7 +45,8 @@ function loadWin() {
 function fit(v) {
   const w = Math.max(MIN_W, Math.min(v.w, innerWidth));
   const h = Math.max(MIN_H, Math.min(v.h, innerHeight));
-  return { ...v, w, h, x: Math.max(0, Math.min(v.x, innerWidth - w)), y: Math.max(0, Math.min(v.y, innerHeight - h)) };
+  // only these keys are kept (older versions also saved the mouse start point here, which made the next drag jump)
+  return { w, h, x: Math.max(0, Math.min(v.x, innerWidth - w)), y: Math.max(0, Math.min(v.y, innerHeight - h)), max: !!v.max };
 }
 
 // Pasted text keeps only bold / italic / underline: styles, links, images and headings are dropped.
@@ -151,15 +152,30 @@ export function Notepad({ notes, onNotes, onClose }) {
     return () => removeEventListener("resize", onResize);
   }, []);
 
-  // drag the title bar to move, the corner to resize
+  // drag the title bar to move; drag any edge or corner to resize ("n", "se", "w", ... = which sides move)
   function drag(e, mode) {
     if (full || e.button !== 0) return;
     e.preventDefault();
-    const start = { px: e.clientX, py: e.clientY, ...win };
+    const start = { ...win, px: e.clientX, py: e.clientY };
     const move = (ev) => {
       const dx = ev.clientX - start.px;
       const dy = ev.clientY - start.py;
-      setWin(mode === "move" ? { ...start, x: start.x + dx, y: start.y + dy } : { ...start, w: start.w + dx, h: start.h + dy });
+      if (mode === "move") return setWin({ ...win, x: start.x + dx, y: start.y + dy });
+      let { x, y, w, h } = start;
+      if (mode.includes("e")) w = Math.min(start.w + dx, innerWidth - start.x);
+      if (mode.includes("s")) h = Math.min(start.h + dy, innerHeight - start.y);
+      // left / top edges: the opposite side stays put, so stop at the minimum size and at the screen edge
+      if (mode.includes("w")) {
+        const nx = Math.max(0, Math.min(start.x + dx, start.x + start.w - MIN_W));
+        w = start.w + start.x - nx;
+        x = nx;
+      }
+      if (mode.includes("n")) {
+        const ny = Math.max(0, Math.min(start.y + dy, start.y + start.h - MIN_H));
+        h = start.h + start.y - ny;
+        y = ny;
+      }
+      setWin({ ...win, x, y, w, h });
     };
     const up = () => {
       removeEventListener("pointermove", move);
@@ -272,7 +288,11 @@ export function Notepad({ notes, onNotes, onClose }) {
         </p>
       )}
       <EditorContent editor={editor} className="np-editor" />
-      {!full && <div className="np-resize" onPointerDown={(e) => drag(e, "resize")} aria-hidden="true" title="Drag to resize" />}
+      {!full && <div className="np-resize" onPointerDown={(e) => drag(e, "se")} aria-hidden="true" title="Drag to resize" />}
+      {!full &&
+        ["n", "s", "e", "w", "ne", "nw", "sw"].map((d) => (
+          <div key={d} className={`np-edge np-edge-${d}`} onPointerDown={(e) => drag(e, d)} aria-hidden="true" />
+        ))}
     </div>
   );
 }

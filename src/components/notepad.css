@@ -52,4 +52,17 @@
 .np-editor .ProseMirror ::selection { background: rgba(255, 255, 255, 0.3); }
 .np-resize { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none;
   background: linear-gradient(135deg, transparent 50%, var(--line) 50%, var(--line) 58%, transparent 58%, transparent 70%, var(--line) 70%, var(--line) 78%, transparent 78%); }
+/* invisible grab strips on every edge and corner (the bottom-right one is .np-resize above) */
+.np-edge { position: absolute; z-index: 2; touch-action: none; }
+.np-edge-n, .np-edge-s { left: 14px; right: 14px; height: 8px; cursor: ns-resize; }
+.np-edge-n { top: 0; }
+.np-edge-s { bottom: 0; right: 22px; }
+.np-edge-e, .np-edge-w { top: 14px; bottom: 14px; width: 8px; cursor: ew-resize; }
+.np-edge-e { right: 0; bottom: 22px; }
+.np-edge-w { left: 0; }
+.np-edge-ne, .np-edge-nw, .np-edge-sw { width: 14px; height: 14px; }
+.np-edge-ne { top: 0; right: 0; cursor: nesw-resize; }
+.np-edge-nw { top: 0; left: 0; cursor: nwse-resize; }
+.np-edge-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.np-resize { z-index: 2; }
 .np-resize:hover { background: linear-gradient(135deg, transparent 50%, #fff 50%, #fff 58%, transparent 58%, transparent 70%, #fff 70%, #fff 78%, transparent 78%); }

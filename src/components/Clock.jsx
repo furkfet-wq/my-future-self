@@ -339,7 +339,7 @@ export function ClockPanel({ alarms, onAlarms, timer, setTimer, sw, setSw, onClo
 /* ---------- Ringing ---------- */
 export function Ringer({ ring, onStop, onSnooze }) {
   const now = useTick(1000);
-  const title = ring.kind === "timer" ? "Time's up" : "Alarm";
+  const title = { timer: "Time's up", reminder: "Reminder" }[ring.kind] || "Alarm";
   return (
     <div className="rng" role="alertdialog" aria-modal="true" aria-label={title}>
       <div className="rng-box">
@@ -356,7 +356,7 @@ export function Ringer({ ring, onStop, onSnooze }) {
           <button className="clk-primary clk-big" onClick={onStop} autoFocus>
             Stop
           </button>
-          {ring.kind === "alarm" && (
+          {ring.kind !== "timer" && (
             <button className="clk-big" onClick={onSnooze}>
               Snooze 5 min
             </button>

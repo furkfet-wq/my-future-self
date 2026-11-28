@@ -32,6 +32,8 @@ import { useCloudSave } from "./lib/sync.js";
 import { ClockButton, ClockPanel, Ringer } from "./components/Clock.jsx";
 import { Notepad, NotepadButton } from "./components/Notepad.jsx";
 import { Calculator, CalculatorButton } from "./components/Calculator.jsx";
+import { Calendar, CalendarButton } from "./components/Calendar.jsx";
+import { dueReminders } from "./lib/reminders.js";
 import { dueAlarms } from "./lib/clock.js";
 import { alarmStart, alarmStop } from "./lib/sound.js";
 import Account from "./components/Account.jsx";
@@ -307,23 +309,30 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
   const [notepadOpen, setNotepadOpen] = useState(false);
   const [calcOpen, setCalcOpen] = useState(false);
   const closeCalc = useCallback(() => setCalcOpen(false), []);
+  const [calendarAt, setCalendarAt] = useState(null); // open calendar: the day it opened on ("" = today)
+  const closeCalendar = useCallback(() => setCalendarAt(null), []);
   const [timer, setTimer] = useLocal("mfs-timer-v1", { endsAt: null, pausedLeft: null, total: 0 });
   const [sw, setSw] = useLocal("mfs-stopwatch-v1", { startedAt: null, banked: 0, laps: [] });
   const [snooze, setSnooze] = useLocal("mfs-snooze-v1", null); // { at, label }
   const [ring, setRing] = useState(null); // { kind: "alarm" | "timer", label }
   const live = useRef({});
-  live.current = { alarms: state.alarms || [], timer, snooze, setAlarms: actions.setAlarms, setTimer, setSnooze };
+  live.current = { alarms: state.alarms || [], reminders: state.reminders || {}, timer, snooze, setAlarms: actions.setAlarms, setTimer, setSnooze };
   useEffect(() => {
     let last = new Date();
     const id = setInterval(() => {
       const now = new Date();
       const L = live.current;
       const due = dueAlarms(L.alarms, last, now); // also catches minutes missed while the tab slept
+      const dueRem = dueReminders(L.reminders, last, now);
       last = now;
       if (due.length) {
         setRing({ kind: "alarm", label: due.map((a) => a.label).filter(Boolean).join(", ") });
         const once = new Set(due.filter((a) => !a.days.length).map((a) => a.id));
         if (once.size) L.setAlarms(L.alarms.map((a) => (once.has(a.id) ? { ...a, on: false } : a)));
+      }
+      if (dueRem.length) {
+        const words = dueRem.map(({ r }) => [r.name, r.text].filter(Boolean).join(": ").slice(0, 160)).filter(Boolean);
+        setRing({ kind: "reminder", label: words.join("  ·  ") });
       }
       if (L.timer.endsAt != null && now.getTime() >= L.timer.endsAt) {
         L.setTimer({ endsAt: null, pausedLeft: null, total: 0 });
@@ -331,7 +340,7 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
       }
       if (L.snooze && now.getTime() >= L.snooze.at) {
         L.setSnooze(null);
-        setRing({ kind: "alarm", label: L.snooze.label });
+        setRing({ kind: L.snooze.kind || "alarm", label: L.snooze.label });
       }
     }, 1000);
     return () => clearInterval(id);
@@ -409,12 +418,13 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
       )}
       {notepadOpen && <Notepad notes={state.notes} onNotes={actions.setNotes} onClose={() => setNotepadOpen(false)} />}
       {calcOpen && <Calculator onClose={closeCalc} />}
+      {calendarAt !== null && <Calendar reminders={state.reminders || {}} onReminders={actions.setReminders} onClose={closeCalendar} startKey={calendarAt || undefined} />}
       {ring && (
         <Ringer
           ring={ring}
           onStop={() => setRing(null)}
           onSnooze={() => {
-            setSnooze({ at: Date.now() + 5 * 60000, label: ring.label });
+            setSnooze({ at: Date.now() + 5 * 60000, label: ring.label, kind: ring.kind });
             setRing(null);
           }}
         />
@@ -498,12 +508,14 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
           state={state}
           balance={balance}
           onOpenToday={() => goToDay(dateKey(new Date()), true)}
+          onOpenCalendar={(k) => setCalendarAt(k)}
           muslim={muslim}
           tools={
             <>
               <ClockButton onClick={() => setClockOpen(true)} />
               <NotepadButton onClick={() => setNotepadOpen((o) => !o)} />
               <CalculatorButton onClick={() => setCalcOpen((o) => !o)} />
+              <CalendarButton onClick={() => setCalendarAt("")} />
             </>
           }
         />

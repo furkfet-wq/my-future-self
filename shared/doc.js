@@ -80,6 +80,32 @@ export function cleanAlarms(list) {
   return out;
 }
 
+// Calendar reminders: { "YYYY-MM-DD": [{ id, name, text, time: "HH:MM" or "" (no ring) }] }
+export const MAX_REMINDERS = 1000;
+export const REMINDER_NAME_MAX = 60;
+export const REMINDER_TEXT_MAX = 1000;
+export function cleanReminders(days) {
+  const out = {};
+  let count = 0;
+  for (const [day, list] of Object.entries(isObj(days) ? days : {})) {
+    if (!DAY.test(day) || !Array.isArray(list)) continue;
+    const kept = [];
+    for (const r of list) {
+      if (count >= MAX_REMINDERS) break;
+      if (!isObj(r) || typeof r.id !== "string" || !r.id || r.id.length > 24) continue;
+      kept.push({
+        id: r.id,
+        name: typeof r.name === "string" ? r.name.slice(0, REMINDER_NAME_MAX) : "",
+        text: typeof r.text === "string" ? r.text.slice(0, REMINDER_TEXT_MAX) : "",
+        time: TIME.test(r.time) ? r.time : "",
+      });
+      count++;
+    }
+    if (kept.length) out[day] = kept;
+  }
+  return out;
+}
+
 // The chosen place keeps no coordinates: only its name and the prayer-times city (privacy).
 function cleanPlace(p) {
   if (!isObj(p) || !Number.isInteger(p.cityId) || p.cityId <= 0) return undefined;
@@ -136,6 +162,7 @@ export function cleanDoc(doc) {
       startBalance: typeof s.startBalance === "number" && Number.isFinite(s.startBalance) ? s.startBalance : 0,
       notes: cleanNotes(s.notes),
       alarms: cleanAlarms(s.alarms),
+      reminders: cleanReminders(s.reminders),
     },
     settings,
   };

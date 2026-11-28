@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { dateKey, daysInMonth } from "../lib/dates.js";
 import { MAIN } from "../lib/prayer.js";
 import { dayStats, streak, isoWeek, dayOfYear, fmtMoney, fmtMins } from "../lib/week.js";
+import { dayReminders } from "../lib/reminders.js";
 
 function useNow() {
   const [now, setNow] = useState(() => new Date());
@@ -19,7 +20,7 @@ function useNow() {
 
 const pad = (n) => String(n).padStart(2, "0");
 
-export default function TodayPanel({ state, balance, onOpenToday, muslim = true, tools = null }) {
+export default function TodayPanel({ state, balance, onOpenToday, onOpenCalendar, muslim = true, tools = null }) {
   const now = useNow();
   const key = dateKey(now);
   const s = useMemo(() => dayStats(state, key), [state, key]);
@@ -28,6 +29,7 @@ export default function TodayPanel({ state, balance, onOpenToday, muslim = true,
   const salahPct = Math.round((prayed / MAIN.length) * 100);
   const yearDays = new Date(now.getFullYear(), 1, 29).getDate() === 29 ? 366 : 365;
   const leftInMonth = daysInMonth(now.getFullYear(), now.getMonth()) - now.getDate();
+  const todayRem = useMemo(() => dayReminders(state.reminders, key), [state.reminders, key]);
 
   return (
     <section className="tp" aria-label="Today">
@@ -44,6 +46,16 @@ export default function TodayPanel({ state, balance, onOpenToday, muslim = true,
           Week {isoWeek(now)} <span>/</span> Day {dayOfYear(now)} of {yearDays} <span>/</span>{" "}
           {leftInMonth === 0 ? "Last day of the month" : `${leftInMonth} day${leftInMonth === 1 ? "" : "s"} left this month`}
         </p>
+        {todayRem.length > 0 && onOpenCalendar && (
+          <div className="tp-rem" aria-label="Today's reminders">
+            {todayRem.map((r) => (
+              <button key={r.id} onClick={() => onOpenCalendar(key)} title={r.text || r.name}>
+                {r.time && <em>{r.time}</em>}
+                {r.name || "Reminder"}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="tp-progress">

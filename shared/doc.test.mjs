@@ -101,9 +101,9 @@ test("notes keep only allowed nodes and marks", () => {
   });
 });
 
-test("long notes are cut to 20,000 letters; missing notes are null", () => {
+test("long notes are cut to 50,000 letters; missing notes are null", () => {
   const big = { type: "doc", content: [para(txt("x".repeat(300_001)))] };
-  assert.equal(withState({ notes: big }).state.notes.content[0].content[0].text.length, 20_000);
+  assert.equal(withState({ notes: big }).state.notes.content[0].content[0].text.length, 50_000);
   assert.equal(cleanDoc(good()).state.notes, null);
   assert.equal(withState({ notes: { type: "nope" } }).state.notes, null);
 });
@@ -148,11 +148,11 @@ test("notes keep colour-menu colours only as exact #rrggbb", async () => {
   }
 });
 
-test("notes stop at 20,000 letters; at most 50 things ring (alarms + timed reminders)", async () => {
+test("notes stop at 50,000 letters; at most 50 things ring (alarms + timed reminders)", async () => {
   const { cleanNotes, ringingCount, MAX_ALARMS } = await import("./doc.js");
   const para = (text) => ({ type: "paragraph", content: [{ type: "text", text }] });
-  const n = cleanNotes({ type: "doc", content: [para("a".repeat(15000)), para("b".repeat(8000)), para("c")] });
-  assert.equal(n.content[0].content[0].text.length, 15000);
+  const n = cleanNotes({ type: "doc", content: [para("a".repeat(45000)), para("b".repeat(8000)), para("c")] });
+  assert.equal(n.content[0].content[0].text.length, 45000);
   assert.equal(n.content[1].content[0].text.length, 5000);
   assert.deepEqual(n.content[2], { type: "paragraph" });
   const alarms = Array.from({ length: 45 }, (_, i) => ({ id: `a${i}`, time: "07:00", label: "", days: [], on: true }));

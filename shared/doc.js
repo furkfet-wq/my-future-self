@@ -24,7 +24,7 @@ export const NOTE_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px
 export const NOTE_COLOURS = ["#ffffff", "#ff5c5c", "#ffa24c", "#ffd84c", "#6ee07a", "#4cc3ff", "#7a8cff", "#c77dff", "#ff7ac8"];
 export const NOTE_HIGHLIGHTS = ["#ffd84c", "#6ee07a", "#4cc3ff", "#ff7ac8", "#ffa24c", "#ffffff"];
 export const NOTE_MAX_BYTES = 300_000;
-export const NOTE_MAX_CHARS = 20_000; // letters in the notepad (spaces count, new lines do not)
+export const NOTE_MAX_CHARS = 50_000; // letters in the notepad (spaces count, new lines do not)
 // Things that ring, wherever they were made: clock alarms + calendar reminders that have a ring time.
 export const MAX_ALARMS = 50;
 export const ringingCount = (alarms, reminders) =>
@@ -66,7 +66,7 @@ function cleanInline(node) {
 export function cleanNotes(notes) {
   if (!isObj(notes) || notes.type !== "doc" || !Array.isArray(notes.content)) return null;
   const content = [];
-  let room = NOTE_MAX_CHARS; // text past 20,000 letters is cut off
+  let room = NOTE_MAX_CHARS; // text past 50,000 letters is cut off
   for (const block of notes.content) {
     if (!isObj(block) || block.type !== "paragraph") continue;
     const inner = [];

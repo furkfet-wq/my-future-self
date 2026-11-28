@@ -60,7 +60,7 @@ const stripPaste = (html) =>
     .replace(/\sstyle\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/<img[^>]*>/gi, "");
 
-// Refuses any typing or paste that would take the note past 20,000 letters; nothing already written changes.
+// Refuses any typing or paste that would take the note past 50,000 letters; nothing already written changes.
 // Deleting, and copies arriving from another device (marked "remote"), always go through.
 const LetterLimit = Extension.create({
   name: "letterLimit",

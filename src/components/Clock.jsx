@@ -451,7 +451,6 @@ export function ClockPanel({ alarms, onAlarms, ringing = alarms.length, timer, s
       <div className="clk-light" aria-hidden="true">
         <i />
         <i />
-        <i />
       </div>
       <div className="clk-top">
         <div className="clk-now">{new Date(now).toLocaleTimeString("en-GB")}</div>

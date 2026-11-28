@@ -132,23 +132,23 @@
 .sw-laps li.best .tag { background: var(--fg); color: var(--bg); }
 .sw-laps li.worst .tag { border: 1px solid var(--dim); color: var(--fg); }
 
-/* Rising white light behind the whole clock: still mostly black. Three wide, centred glows (even from left to right)
-   rise and sink very slowly; they only ever move up and down. The faint light lines stay still.
-   Only transform and opacity change, so it costs the browser very little. */
+/* Light behind the whole clock: mostly black, a soft white glow at the bottom that slowly "breathes" upward.
+   Built for smoothness: no blur filter (the gradients are soft by themselves), each layer only goes between two
+   states with one gentle sine ease, and only transform + opacity change (done on the graphics card). */
 .clk { background: #000; isolation: isolate; }
-.clk-light { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
-.clk-light i { position: absolute; left: -30vw; right: -30vw; bottom: -32vh; height: 62vh; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.3), rgba(225, 232, 255, 0.11) 50%, transparent 80%);
-  filter: blur(26px); will-change: transform, opacity; animation: clk-rise-a 56s ease-in-out infinite alternate; }
-.clk-light i:nth-child(2) { left: -10vw; right: -10vw; bottom: -26vh; height: 50vh;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.22), rgba(210, 225, 255, 0.07) 55%, transparent 82%);
-  animation: clk-rise-b 74s ease-in-out infinite alternate; }
-.clk-light i:nth-child(3) { left: -50vw; right: -50vw; bottom: -30vh; height: 46vh;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.16), transparent 78%);
-  animation: clk-rise-c 92s ease-in-out infinite alternate; }
-@keyframes clk-rise-a { 0% { transform: translateY(8vh); opacity: 0.7; } 50% { transform: translateY(-10vh); opacity: 1; } 100% { transform: translateY(2vh); opacity: 0.85; } }
-@keyframes clk-rise-b { 0% { transform: translateY(-6vh); opacity: 0.9; } 50% { transform: translateY(10vh); opacity: 0.6; } 100% { transform: translateY(-12vh); opacity: 1; } }
-@keyframes clk-rise-c { 0% { transform: translateY(6vh); opacity: 0.5; } 100% { transform: translateY(-8vh); opacity: 0.85; } }
+.clk-light { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; contain: strict; }
+.clk-light i { position: absolute; left: 0; right: 0; bottom: -12vh; height: 112vh; will-change: transform, opacity; /* reaches 12vh below the screen, so moving up never shows an edge */
+  backface-visibility: hidden; transform: translateZ(0); }
+/* main glow: rises a little and brightens, then sinks and dims */
+.clk-light i:nth-child(1) {
+  background: radial-gradient(ellipse 78% 62% at 50% 92%, rgba(255, 255, 255, 0.34) 0%, rgba(235, 240, 255, 0.16) 35%, rgba(255, 255, 255, 0.04) 62%, transparent 80%);
+  animation: clk-breathe 16s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate; }
+/* wide haze: the opposite way round, slower, so the light never sits still and never pulses all at once */
+.clk-light i:nth-child(2) {
+  background: radial-gradient(ellipse 115% 52% at 50% 92%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 45%, transparent 75%);
+  animation: clk-haze 23s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate; }
+@keyframes clk-breathe { from { transform: translate3d(0, 6vh, 0); opacity: 0.65; } to { transform: translate3d(0, -4vh, 0); opacity: 1; } }
+@keyframes clk-haze { from { transform: translate3d(0, -3vh, 0); opacity: 1; } to { transform: translate3d(0, 5vh, 0); opacity: 0.55; } }
 .clk::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none; height: 75vh; opacity: 0.45;
   background: repeating-linear-gradient(90deg, transparent 0 9vw, rgba(255, 255, 255, 0.06) 9vw calc(9vw + 1px), transparent calc(9vw + 2px) 13vw);
   -webkit-mask-image: linear-gradient(to top, #000, transparent 85%); mask-image: linear-gradient(to top, #000, transparent 85%); }

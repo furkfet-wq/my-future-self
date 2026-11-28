@@ -41,6 +41,18 @@ export function fmtIn(ms) {
   return `Rings in ${m} min`;
 }
 
+// Whole days, hours, minutes and seconds in a time (the stopwatch shows these, no fractions of a second).
+export function splitDHMS(ms) {
+  const t = Math.floor(Math.max(0, ms) / 1000);
+  return { d: Math.floor(t / 86400), h: Math.floor((t % 86400) / 3600), m: Math.floor((t % 3600) / 60), s: t % 60 };
+}
+// "2d 03:04:05", "03:04:05", "04:05"
+export function fmtDHMS(ms) {
+  const { d, h, m, s } = splitDHMS(ms);
+  const base = d || h ? `${two(h)}:${two(m)}:${two(s)}` : `${two(m)}:${two(s)}`;
+  return d ? `${d}d ${base}` : base;
+}
+
 const two = (n) => String(n).padStart(2, "0");
 // "1:02:03.45" (hours only when needed, hundredths when asked)
 export function fmtClock(ms, withHundredths) {

@@ -407,8 +407,8 @@ test("own timer of 1 min 30 s rings at the end", async () => {
   await openClock(page);
   await page.getByRole("tab", { name: "Timer" }).click();
   const dlg = page.getByRole("dialog", { name: "Clock" });
-  await dlg.getByLabel("Minutes").fill("1");
-  await dlg.getByLabel("Seconds").fill("30");
+  await dlg.getByLabel("Minutes", { exact: true }).fill("1");
+  await dlg.getByLabel("Seconds", { exact: true }).fill("30");
   await dlg.getByRole("button", { name: "Start" }).click();
   await page.getByText("01:30").first().waitFor();
   await page.clock.fastForward(92000);
@@ -429,11 +429,11 @@ test("stopwatch counts and records laps", async () => {
   await dlg.getByRole("button", { name: "Lap" }).click();
   await page.waitForTimeout(600);
   await dlg.getByRole("button", { name: "Stop" }).click();
-  const shown = await page.locator(".sw-time").textContent();
-  assert.notEqual(shown.trim(), "00:00.00");
+  // days / hours / minutes / seconds, no fractions of a second
+  assert.equal(await page.locator(".sw-units").getAttribute("aria-label"), "00:01");
   assert.equal(await page.locator(".sw-laps li").count(), 1);
   await dlg.getByRole("button", { name: "Reset" }).click();
-  assert.equal((await page.locator(".sw-time").textContent()).trim(), "00:00.00");
+  assert.equal(await page.locator(".sw-units").getAttribute("aria-label"), "00:00");
   await ctx.close();
 });
 

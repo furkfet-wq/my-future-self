@@ -339,7 +339,7 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
       }
       if (L.timer.endsAt != null && now.getTime() >= L.timer.endsAt) {
         L.setTimer({ endsAt: null, pausedLeft: null, total: 0 });
-        setRing({ kind: "timer", label: "" });
+        setRing({ kind: "timer", label: L.timer.label || "" });
       }
       if (L.snooze && now.getTime() >= L.snooze.at) {
         L.setSnooze(null);

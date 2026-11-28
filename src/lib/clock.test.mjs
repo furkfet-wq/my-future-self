@@ -62,3 +62,13 @@ test("stopwatch maths", () => {
   assert.equal(stopwatchElapsed({ startedAt: 1000, banked: 500 }, 3000), 2500);
   assert.equal(stopwatchElapsed({ startedAt: null, banked: 4200 }, 99999), 4200);
 });
+
+import { splitDHMS, fmtDHMS } from "./clock.js";
+test("stopwatch time in days, hours, minutes, seconds", () => {
+  assert.deepEqual(splitDHMS(0), { d: 0, h: 0, m: 0, s: 0 });
+  assert.deepEqual(splitDHMS(999), { d: 0, h: 0, m: 0, s: 0 });
+  assert.deepEqual(splitDHMS(((2 * 24 + 3) * 3600 + 4 * 60 + 5) * 1000 + 700), { d: 2, h: 3, m: 4, s: 5 });
+  assert.equal(fmtDHMS(65000), "01:05");
+  assert.equal(fmtDHMS(3_725_000), "01:02:05");
+  assert.equal(fmtDHMS(90_061_000), "1d 01:01:01");
+});

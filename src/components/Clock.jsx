@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { nextRing, fmtIn, fmtClock, timerLeft, stopwatchElapsed } from "../lib/clock.js";
+import { nextRing, fmtIn, timerLeft, stopwatchElapsed, splitDHMS, fmtDHMS } from "../lib/clock.js";
 import { MAX_ALARMS } from "../../shared/doc.js";
 import "./clock.css";
 
@@ -12,7 +12,7 @@ const DAYS = [
   [6, "Sat"],
   [0, "Sun"],
 ];
-const QUICK_MIN = [1, 5, 10, 15, 30];
+const QUICK_MIN = [1, 3, 5, 10, 15, 20, 25, 30, 45, 60];
 const newId = () => Math.random().toString(36).slice(2, 10);
 
 // Re-render every `ms` (the clock faces tick).
@@ -167,9 +167,32 @@ function Alarms({ alarms, onAlarms, ringing }) {
 }
 
 /* ---------- Timer ---------- */
+const RECENT_KEY = "mfs-recent-timers-v1"; // this browser only
+const loadRecent = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
+    return Array.isArray(v) ? v.filter((x) => Number.isInteger(x?.ms) && x.ms > 0 && x.ms < 100 * 3600000).slice(0, 4) : [];
+  } catch {
+    return [];
+  }
+};
+const msLabel = (ms) => {
+  const t = Math.round(ms / 1000);
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const s = t % 60;
+  return [h && `${h} h`, m && `${m} min`, s && `${s} s`].filter(Boolean).join(" ") || "0 s";
+};
+const clockAt = (ms) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+// One number box with ▲ ▼ buttons; wraps round (59 -> 0).
 function NumBox({ label, value, max, onChange }) {
+  const step = (d) => onChange((value + d + max + 1) % (max + 1));
   return (
-    <label className="tm-num">
+    <div className="tm-num">
+      <button className="tm-step" onClick={() => step(1)} aria-label={`${label} up`} tabIndex={-1}>
+        ▲
+      </button>
       <input
         type="number"
         inputMode="numeric"
@@ -179,103 +202,187 @@ function NumBox({ label, value, max, onChange }) {
         aria-label={label}
         onChange={(e) => onChange(Math.max(0, Math.min(max, Math.floor(Number(e.target.value) || 0))))}
         onFocus={(e) => e.target.select()}
+        onKeyDown={(e) => (e.key === "ArrowUp" || e.key === "ArrowDown") && (e.preventDefault(), step(e.key === "ArrowUp" ? 1 : -1))}
       />
+      <button className="tm-step" onClick={() => step(-1)} aria-label={`${label} down`} tabIndex={-1}>
+        ▼
+      </button>
       <span>{label}</span>
-    </label>
+    </div>
   );
 }
 
 function Timer({ timer, setTimer }) {
-  const now = useTick(200);
+  const now = useTick(250);
   const [h, setH] = useState(0);
   const [m, setM] = useState(5);
   const [s, setS] = useState(0);
+  const [label, setLabel] = useState("");
+  const [recent, setRecent] = useState(loadRecent);
   const active = timer.endsAt != null || timer.pausedLeft != null;
   const left = timerLeft(timer, now);
-  const start = (ms) => ms > 0 && setTimer({ endsAt: Date.now() + ms, pausedLeft: null, total: ms });
+  const start = (ms, name = label) => {
+    if (ms <= 0) return;
+    const r = [{ ms, label: name.trim().slice(0, 40) }, ...recent.filter((x) => x.ms !== ms || x.label !== name.trim())].slice(0, 4);
+    setRecent(r);
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(r));
+    } catch {
+      /* ignore */
+    }
+    setTimer({ endsAt: Date.now() + ms, pausedLeft: null, total: ms, label: name.trim().slice(0, 40) });
+  };
 
   if (!active) {
     const total = ((h * 60 + m) * 60 + s) * 1000;
+    const set = (ms) => {
+      const t = Math.round(ms / 1000);
+      setH(Math.floor(t / 3600));
+      setM(Math.floor((t % 3600) / 60));
+      setS(t % 60);
+    };
     return (
       <div className="tm">
-        <div className="tm-set">
-          <NumBox label="Hours" value={h} max={23} onChange={setH} />
-          <b>:</b>
-          <NumBox label="Minutes" value={m} max={59} onChange={setM} />
-          <b>:</b>
-          <NumBox label="Seconds" value={s} max={59} onChange={setS} />
+        <div className="clk-card tm-card">
+          <div className="tm-set">
+            <NumBox label="Hours" value={h} max={23} onChange={setH} />
+            <b>:</b>
+            <NumBox label="Minutes" value={m} max={59} onChange={setM} />
+            <b>:</b>
+            <NumBox label="Seconds" value={s} max={59} onChange={setS} />
+          </div>
+          <label className="tm-name">
+            <span>Name (optional)</span>
+            <input value={label} maxLength={40} placeholder="e.g. Tea, Study, Oven" onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && start(total)} />
+          </label>
+          <p className="tm-ends">{total ? `Ends at ${clockAt(now + total)} · ${msLabel(total)}` : "Pick a time"}</p>
+          <button className="clk-primary clk-big" disabled={!total} onClick={() => start(total)}>
+            Start
+          </button>
         </div>
-        <div className="tm-quick">
-          {QUICK_MIN.map((q) => (
-            <button key={q} onClick={() => (setH(0), setM(q), setS(0))}>
-              {q} min
-            </button>
-          ))}
+        <div className="clk-section">
+          <span className="clk-lbl">Quick start</span>
+          <div className="tm-quick">
+            {QUICK_MIN.map((q) => (
+              <button key={q} onClick={() => set(q * 60000)} onDoubleClick={() => start(q * 60000)} title="Click to set, double-click to start">
+                {q < 60 ? `${q} min` : `${q / 60} h`}
+              </button>
+            ))}
+          </div>
         </div>
-        <button className="clk-primary clk-big" disabled={!total} onClick={() => start(total)}>
-          Start
-        </button>
+        {recent.length > 0 && (
+          <div className="clk-section">
+            <span className="clk-lbl">Recent</span>
+            <div className="tm-recent">
+              {recent.map((r) => (
+                <button key={`${r.ms}-${r.label}`} onClick={() => start(r.ms, r.label || "")}>
+                  <b>{msLabel(r.ms)}</b>
+                  <span>{r.label || "Timer"}</span>
+                  <i aria-hidden="true">▶</i>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
   const frac = timer.total ? left / timer.total : 0;
-  const R = 120;
+  const R = 130;
   const C = 2 * Math.PI * R;
+  const running = timer.endsAt != null;
   return (
     <div className="tm">
-      <div className="tm-ring">
-        <svg viewBox="0 0 280 280" aria-hidden="true">
-          <circle cx="140" cy="140" r={R} className="tm-track" />
-          <circle cx="140" cy="140" r={R} className="tm-left" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - frac) }} />
+      <div className={`tm-ring${running ? "" : " paused"}`}>
+        <svg viewBox="0 0 300 300" aria-hidden="true">
+          <circle cx="150" cy="150" r={R} className="tm-track" />
+          <circle cx="150" cy="150" r={R} className="tm-left" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - frac) }} />
         </svg>
-        <div className="tm-left-txt">{fmtClock(Math.ceil(left / 1000) * 1000, false)}</div>
+        <div className="tm-center">
+          <span className="tm-label">{timer.label || "Timer"}</span>
+          <div className="tm-left-txt">{fmtDHMS(Math.ceil(left / 1000) * 1000)}</div>
+          <span className="tm-sub">{running ? `Ends at ${clockAt(timer.endsAt)}` : "Paused"}</span>
+        </div>
       </div>
       <div className="clk-row">
-        {timer.endsAt != null ? (
-          <button className="clk-primary" onClick={() => setTimer({ ...timer, endsAt: null, pausedLeft: left })}>
+        {running ? (
+          <button className="clk-primary clk-big" onClick={() => setTimer({ ...timer, endsAt: null, pausedLeft: left })}>
             Pause
           </button>
         ) : (
-          <button className="clk-primary" onClick={() => setTimer({ ...timer, endsAt: Date.now() + timer.pausedLeft, pausedLeft: null })}>
+          <button className="clk-primary clk-big" onClick={() => setTimer({ ...timer, endsAt: Date.now() + timer.pausedLeft, pausedLeft: null })}>
             Resume
           </button>
         )}
+        <button
+          onClick={() =>
+            setTimer(
+              running
+                ? { ...timer, endsAt: timer.endsAt + 60000, total: timer.total + 60000 }
+                : { ...timer, pausedLeft: timer.pausedLeft + 60000, total: timer.total + 60000 }
+            )
+          }
+        >
+          +1 min
+        </button>
         <button onClick={() => setTimer({ endsAt: null, pausedLeft: null, total: 0 })}>Reset</button>
       </div>
+      <p className="clk-note">Total {msLabel(timer.total)}. It keeps going when you close the clock.</p>
     </div>
   );
 }
 
 /* ---------- Stopwatch ---------- */
 function Stopwatch({ sw, setSw }) {
-  const [now, setNow] = useState(Date.now());
   const running = sw.startedAt != null;
-  useEffect(() => {
-    if (!running) return undefined;
-    let raf;
-    const loop = () => {
-      setNow(Date.now());
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [running]);
+  const now = useTick(running ? 250 : 60000); // whole seconds only: no need to redraw 60 times a second
   const elapsed = stopwatchElapsed(sw, running ? now : 0);
+  const { d, h, m, s } = splitDHMS(elapsed);
   const laps = sw.laps || [];
+  const lapTimes = laps.map((t, i) => t - (laps[i - 1] || 0));
+  const fastest = lapTimes.length > 1 ? Math.min(...lapTimes) : null;
+  const slowest = lapTimes.length > 1 ? Math.max(...lapTimes) : null;
+  const avg = lapTimes.length ? lapTimes.reduce((a, b) => a + b, 0) / lapTimes.length : 0;
+  const R = 130;
+  const C = 2 * Math.PI * R;
+  const secFrac = (elapsed % 60000) / 60000;
+  const parts = [
+    ["Days", d],
+    ["Hours", h],
+    ["Minutes", m],
+    ["Seconds", s],
+  ];
   return (
     <div className="sw">
-      <div className="sw-time">{fmtClock(elapsed, true)}</div>
+      <div className={`tm-ring sw-ring${running ? " live" : ""}`}>
+        <svg viewBox="0 0 300 300" aria-hidden="true">
+          <circle cx="150" cy="150" r={R} className="tm-track" />
+          <circle cx="150" cy="150" r={R} className="tm-left" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - secFrac) }} />
+        </svg>
+        <div className="tm-center">
+          <span className="tm-label">{running ? "Running" : elapsed ? "Stopped" : "Stopwatch"}</span>
+          <div className="sw-units" aria-label={fmtDHMS(elapsed)}>
+            {parts.map(([name, v]) => (
+              <div key={name} className={`sw-unit${name === "Days" && !d ? " dim" : ""}`}>
+                <b>{String(v).padStart(2, "0")}</b>
+                <span>{name}</span>
+              </div>
+            ))}
+          </div>
+          <span className="tm-sub">{sw.startedAt != null ? `Since ${clockAt(sw.startedAt)}` : laps.length ? `${laps.length} lap${laps.length > 1 ? "s" : ""}` : "Press Start"}</span>
+        </div>
+      </div>
       <div className="clk-row">
         {running ? (
           <>
-            <button className="clk-primary" onClick={() => setSw({ ...sw, startedAt: null, banked: stopwatchElapsed(sw, Date.now()) })}>
+            <button className="clk-primary clk-big" onClick={() => setSw({ ...sw, startedAt: null, banked: stopwatchElapsed(sw, Date.now()) })}>
               Stop
             </button>
             <button onClick={() => setSw({ ...sw, laps: [...laps, stopwatchElapsed(sw, Date.now())].slice(-99) })}>Lap</button>
           </>
         ) : (
           <>
-            <button className="clk-primary" onClick={() => setSw({ ...sw, startedAt: Date.now() })}>
+            <button className="clk-primary clk-big" onClick={() => setSw({ ...sw, startedAt: Date.now() })}>
               {elapsed ? "Resume" : "Start"}
             </button>
             {elapsed > 0 && <button onClick={() => setSw({ startedAt: null, banked: 0, laps: [] })}>Reset</button>}
@@ -283,18 +390,42 @@ function Stopwatch({ sw, setSw }) {
         )}
       </div>
       {laps.length > 0 && (
-        <ol className="sw-laps">
-          {laps
-            .map((total, i) => ({ n: i + 1, total, lap: total - (laps[i - 1] || 0) }))
-            .reverse()
-            .map((l) => (
-              <li key={l.n}>
-                <span>Lap {l.n}</span>
-                <b>{fmtClock(l.lap, true)}</b>
-                <em>{fmtClock(l.total, true)}</em>
-              </li>
-            ))}
-        </ol>
+        <div className="clk-card sw-card">
+          <div className="sw-stats">
+            <div>
+              <span>Laps</span>
+              <b>{laps.length}</b>
+            </div>
+            <div>
+              <span>Average</span>
+              <b>{fmtDHMS(avg)}</b>
+            </div>
+            <div>
+              <span>Fastest</span>
+              <b>{fastest == null ? "–" : fmtDHMS(fastest)}</b>
+            </div>
+            <div>
+              <span>Slowest</span>
+              <b>{slowest == null ? "–" : fmtDHMS(slowest)}</b>
+            </div>
+          </div>
+          <ol className="sw-laps">
+            {lapTimes
+              .map((lap, i) => ({ n: i + 1, lap, total: laps[i] }))
+              .reverse()
+              .map((l) => (
+                <li key={l.n} className={l.lap === fastest ? "best" : l.lap === slowest ? "worst" : ""}>
+                  <span>
+                    Lap {l.n}
+                    {l.lap === fastest && <em className="tag">Fastest</em>}
+                    {l.lap === slowest && <em className="tag">Slowest</em>}
+                  </span>
+                  <b>{fmtDHMS(l.lap)}</b>
+                  <em>{fmtDHMS(l.total)}</em>
+                </li>
+              ))}
+          </ol>
+        </div>
       )}
     </div>
   );

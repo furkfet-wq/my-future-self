@@ -75,7 +75,9 @@ export async function startWorker() {
   wrangler = spawn(
     process.execPath,
     ["node_modules/wrangler/bin/wrangler.js", "dev", "--local", "--port", "8787", "--ip", "127.0.0.1", "--show-interactive-dev-session=false",
-      "--var", `GOOGLE_CLIENT_ID:${CLIENT_ID}`, "--var", "JWKS_URL:http://127.0.0.1:8790/certs", "--var", "PRAYER_URL:http://127.0.0.1:9/", "--var", "TEST_MODE:1", "--var", "PRAYER_BASE:http://127.0.0.1:8792"],
+      "--var", `GOOGLE_CLIENT_ID:${CLIENT_ID}`, "--var", "JWKS_URL:http://127.0.0.1:8790/certs", "--var", "PRAYER_URL:http://127.0.0.1:9/", "--var", "TEST_MODE:1", "--var", "PRAYER_BASE:http://127.0.0.1:8792",
+      // small daily limits so the tests can reach them (live: 800 calls, 600 saves, 200 before sign-in)
+      "--var", "DAILY_USER:100", "--var", "DAILY_SAVES:5", "--var", "DAILY_VISITOR:30"],
     { stdio: "ignore" }
   );
   for (let i = 0; i < 120; i++) {

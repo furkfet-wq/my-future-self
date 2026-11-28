@@ -206,3 +206,42 @@ test("signed-in calls are limited per account, not per shared address", async ()
   }
   assert.ok(statuses.every((s) => s === 200), `got ${[...new Set(statuses)].join(",")}`);
 });
+
+// ---- daily limits (tests run with DAILY_USER 100, DAILY_SAVES 5, DAILY_VISITOR 30) ----
+test("saves stop at the daily limit, without changing the data", async () => {
+  const cookie = await signIn((USER = "quota-saves"));
+  let v = 0;
+  for (let i = 1; i <= 5; i++) {
+    const r = await req("/api/data", { method: "PUT", cookie, body: { data: doc(i), version: v, user: USER } });
+    assert.equal(r.status, 200, `save ${i}`);
+    v = (await r.json()).version;
+  }
+  const over = await req("/api/data", { method: "PUT", cookie, body: { data: doc(99), version: v, user: USER } });
+  assert.equal(over.status, 429);
+  const wait = Number(over.headers.get("retry-after"));
+  assert.ok(wait > 0 && wait <= 86400, `retry-after ${wait}`);
+  assert.deepEqual(await (await req("/api/data", { cookie })).json(), { data: doc(5), version: 5 });
+  // a stale save is still a conflict, not a limit
+  assert.equal((await req("/api/data", { method: "PUT", cookie, body: { data: doc(98), version: 1, user: USER } })).status, 409);
+});
+
+test("calls stop at the daily limit per account; others are not affected", async () => {
+  const a = await signIn("quota-calls-a");
+  const b = await signIn("quota-calls-b");
+  const statuses = [];
+  for (let i = 0; i < 105; i++) statuses.push((await req("/api/me", { cookie: a, client: "same-wifi" })).status);
+  assert.equal(statuses.filter((s) => s === 200).length, 100, `got ${[...new Set(statuses)].join(",")}`);
+  assert.equal(statuses.at(-1), 429);
+  assert.equal((await req("/api/me", { cookie: b, client: "same-wifi" })).status, 200);
+  // saves have their own count
+  assert.equal((await req("/api/data", { method: "PUT", cookie: a, body: { data: doc(1), version: 0, user: "quota-calls-a" } })).status, 200);
+});
+
+test("visitors (not signed in) stop at the daily limit per address", async () => {
+  const statuses = [];
+  for (let i = 0; i < 32; i++) statuses.push((await req("/prayer-times.json", { client: "visitor-x" })).status);
+  assert.ok(statuses.slice(0, 30).every((s) => s !== 429), statuses.join(","));
+  assert.equal(statuses.at(-1), 429);
+  assert.equal((await req("/api/login", { method: "POST", body: { credential: "x.y.z" }, client: "visitor-x" })).status, 429);
+  assert.equal((await req("/api/me", { client: "visitor-y" })).status, 200);
+});

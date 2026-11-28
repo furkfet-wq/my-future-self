@@ -1,9 +1,10 @@
 // Talks to the app's own Worker (/api/*). The sign-in cookie is HttpOnly, so scripts never see it.
 
 export class ApiError extends Error {
-  constructor(status) {
+  constructor(status, retryAfterS = 0) {
     super(`api ${status}`);
     this.status = status;
+    this.retryAfterS = retryAfterS; // 429: seconds until the daily limit resets (00:00 UTC)
   }
 }
 
@@ -16,7 +17,7 @@ async function call(path, { method = "GET", body, keepalive = false } = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (res.status === 409) return { conflict: await res.json() };
-  if (!res.ok) throw new ApiError(res.status);
+  if (!res.ok) throw new ApiError(res.status, Number(res.headers.get("Retry-After")) || 0);
   return res.json();
 }
 

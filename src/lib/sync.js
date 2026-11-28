@@ -20,6 +20,7 @@ export function useCloudSave({ userId, state, settings, startVersion, onRemote, 
   const busy = useRef(false);
   const first = useRef(true);
   const skipNext = useRef(false);
+  const blockedUntil = useRef(0); // daily limit reached: no save tries before this time
   const onRemoteRef = useRef(onRemote);
   onRemoteRef.current = onRemote;
   latest.current = { v: DOC_VERSION, state, settings };
@@ -46,6 +47,10 @@ export function useCloudSave({ userId, state, settings, startVersion, onRemote, 
       return;
     }
     if (!pending.current && !isDirty()) return;
+    if (Date.now() < blockedUntil.current) {
+      timer.current = setTimeout(save, blockedUntil.current - Date.now());
+      return;
+    }
     busy.current = true;
     const sent = latest.current;
     try {
@@ -61,7 +66,11 @@ export function useCloudSave({ userId, state, settings, startVersion, onRemote, 
     } catch (e) {
       // 403: another account signed in on this browser meanwhile; 401: signed out (e.g. "Sign out everywhere")
       if (e.status === 403 || e.status === 401) return location.reload();
-      timer.current = setTimeout(save, RETRY_MS); // offline or server trouble: try again later, the change stays in this browser
+      // 429: daily limit reached. Each refused try still costs a Cloudflare request, so wait until it resets
+      // (plus a random minute so every tab doesn't come back at once); the change stays in this browser meanwhile.
+      const wait = e.status === 429 ? Math.max(RETRY_MS, (e.retryAfterS || 1800) * 1000 + Math.random() * 60000) : RETRY_MS;
+      if (e.status === 429) blockedUntil.current = Date.now() + wait;
+      timer.current = setTimeout(save, wait); // offline or server trouble: try again later, the change stays in this browser
     } finally {
       busy.current = false;
     }
@@ -101,7 +110,7 @@ export function useCloudSave({ userId, state, settings, startVersion, onRemote, 
       }
     };
     const onHide = () => {
-      if (!pending.current || busy.current) return;
+      if (!pending.current || busy.current || Date.now() < blockedUntil.current) return;
       const body = latest.current;
       if (JSON.stringify(body).length < KEEPALIVE_MAX) putDoc(body, version.current, userId, true).catch(() => {});
       // the dirty flag stays: on the next start the copy is sent again with its old version;

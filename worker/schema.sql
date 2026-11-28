@@ -18,5 +18,14 @@ CREATE TABLE IF NOT EXISTS docs (
   user_id TEXT PRIMARY KEY,     -- one saved document per account
   data TEXT NOT NULL,           -- JSON
   version INTEGER NOT NULL,
-  updated_at INTEGER
+  updated_at INTEGER,
+  save_day INTEGER NOT NULL DEFAULT 0,  -- UTC day number of the last save (daily save limit, worker/quota.js)
+  saves INTEGER NOT NULL DEFAULT 0      -- saves on that day
+);
+
+-- Daily call counts per account ("u:<id>") or per address before sign-in ("ip:<address>"). One row each, reused every day.
+CREATE TABLE IF NOT EXISTS usage (
+  key TEXT PRIMARY KEY,
+  day INTEGER NOT NULL,         -- UTC day number
+  n INTEGER NOT NULL            -- calls on that day
 );

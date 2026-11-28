@@ -305,10 +305,13 @@ button.ad-tr:hover { background: var(--soft); translate: 0 -2px; }
 .ad-mini { display: block; width: 70px; height: 8px; border: 1px solid var(--fg); border-radius: 999px; overflow: hidden; }
 .ad-mini i { display: block; height: 100%; background: var(--fg); }
 .ad-dim { color: var(--dim); }
-.ad-sub { margin: 14px 0 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); } /* "Salah" heading under the habits in a day's details */
 .ad-detail { overflow: hidden; border-bottom: var(--stroke) solid var(--fg); }
 .ad-detail-in { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px 30px; padding: 18px 10px 20px; }
-.ad-habs { display: grid; gap: 8px; }
+.ad-habs { display: grid; gap: 8px; align-content: start; }
+/* Muslim mode: habits | salah | numbers side by side (salah next to the habits); narrower screens: numbers go below */
+.ad-detail-in:has(.ad-salah) { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
+.ad-salah { align-content: start; padding-left: 24px; border-left: 1px solid var(--line); }
+@media (max-width: 1000px) { .ad-detail-in:has(.ad-salah) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .ad-detail-in:has(.ad-salah) .ad-facts { grid-column: 1 / -1; } }
 .ad-hab { display: flex; align-items: center; gap: 10px; }
 .ad-hab em { margin-left: auto; font-style: normal; font-size: 12px; color: var(--dim); }
 .ad-box { width: 18px; height: 18px; border: var(--stroke) solid var(--fg); border-radius: 4px; background: var(--fg); flex: none; }
@@ -322,7 +325,8 @@ button.ad-tr:hover { background: var(--soft); translate: 0 -2px; }
 .ad-edit:hover { background: var(--fg); color: var(--bg); translate: 0 -3px; }
 .ad-table-card { overflow-x: auto; }
 @media (max-width: 700px) {
-  .ad-detail-in { grid-template-columns: minmax(0, 1fr); }
+  .ad-detail-in, .ad-detail-in:has(.ad-salah) { grid-template-columns: minmax(0, 1fr); }
+  .ad-salah { padding-left: 0; border-left: none; }
   .ad-table { min-width: 860px; }
 }
 

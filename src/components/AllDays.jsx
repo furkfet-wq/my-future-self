@@ -43,13 +43,12 @@ function DayDetail({ state, d, onEdit, muslim }) {
         <div className="ad-habs">
           {habits.length === 0 && <p className="ad-dim">No habits yet.</p>}
           {habits.map((h) => row(h.id, h.name, !!checks[h.id]))}
-          {muslim && (
-            <>
-              <p className="ad-sub">Salah</p>
-              {SALAH.map((p) => row(`salah-${p.id}`, p.optional ? `${p.name} (optional)` : p.name, !!prayed[p.id], "Prayed", "Not prayed"))}
-            </>
-          )}
         </div>
+        {muslim && (
+          <div className="ad-habs ad-salah">
+            {SALAH.map((p) => row(`salah-${p.id}`, p.optional ? `${p.name} (optional)` : p.name, !!prayed[p.id], "Prayed", "Not prayed"))}
+          </div>
+        )}
         <dl className="ad-facts">
           <div><dt>Habits done</dt><dd>{d.done}/{d.total} ({d.pct}%)</dd></div>
           <div><dt>Feel</dt><dd>{d.feel == null ? "–" : `${d.feel}/10`}</dd></div>

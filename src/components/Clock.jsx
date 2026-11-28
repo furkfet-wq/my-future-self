@@ -443,11 +443,9 @@ function useMouseLight(root, spot) {
     if (!el || !light || !matchMedia("(hover: hover)").matches) return undefined;
     const pos = { x: innerWidth / 2, y: innerHeight, tx: innerWidth / 2, ty: innerHeight };
     let raf = 0;
-    // move the light, and shift its dot pattern back by the same amount so the dots stay fixed on the page
+    // move the light
     const place = () => {
       light.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
-      light.style.setProperty("--gx", `${(150 - pos.x) % 22}px`);
-      light.style.setProperty("--gy", `${(150 - pos.y) % 22}px`);
     };
     const draw = () => {
       pos.x += (pos.tx - pos.x) * 0.16;

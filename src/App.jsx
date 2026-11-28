@@ -34,6 +34,8 @@ import { AlarmBanner } from "./components/AlarmBanner.jsx";
 import { Notepad, NotepadButton } from "./components/Notepad.jsx";
 import { Calculator, CalculatorButton } from "./components/Calculator.jsx";
 import { Calendar, CalendarButton } from "./components/Calendar.jsx";
+import { StickyNotes, StickyButton, newSticky } from "./components/Sticky.jsx";
+import { MAX_STICKIES } from "../shared/doc.js";
 import { dueReminders } from "./lib/reminders.js";
 import { ringingCount } from "../shared/doc.js";
 import { dueAlarms } from "./lib/clock.js";
@@ -313,6 +315,12 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
   const closeCalc = useCallback(() => setCalcOpen(false), []);
   const [calendarAt, setCalendarAt] = useState(null); // open calendar: the day it opened on ("" = today)
   const closeCalendar = useCallback(() => setCalendarAt(null), []);
+  const [freshSticky, setFreshSticky] = useState(null); // the note just made gets the cursor
+  const stickies = state.stickies || [];
+  const setStickies = (list, freshId) => {
+    actions.setStickies(list);
+    if (freshId) setFreshSticky(freshId);
+  };
   const [timer, setTimer] = useLocal("mfs-timer-v1", { endsAt: null, pausedLeft: null, total: 0 });
   const [sw, setSw] = useLocal("mfs-stopwatch-v1", { startedAt: null, banked: 0, laps: [] });
   const [snooze, setSnooze] = useLocal("mfs-snooze-v1", null); // { at, label }
@@ -436,6 +444,7 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
       )}
       {notepadOpen && <Notepad notes={state.notes} onNotes={actions.setNotes} onClose={() => setNotepadOpen(false)} />}
       {calcOpen && <Calculator onClose={closeCalc} />}
+      {ready && <StickyNotes notes={stickies} onNotes={setStickies} freshId={freshSticky} />}
       {calendarAt !== null && <Calendar reminders={state.reminders || {}} onReminders={actions.setReminders} onClose={closeCalendar} startKey={calendarAt || undefined} alarmCount={(state.alarms || []).length} />}
       {ring && (
         <AlarmBanner
@@ -546,6 +555,13 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
               <NotepadButton onClick={() => setNotepadOpen((o) => !o)} />
               <CalculatorButton onClick={() => setCalcOpen((o) => !o)} />
               <CalendarButton onClick={() => setCalendarAt("")} />
+              <StickyButton
+                disabled={stickies.length >= MAX_STICKIES}
+                onClick={() => {
+                  const n = newSticky();
+                  setStickies([...stickies, n], n.id);
+                }}
+              />
             </>
           }
         />

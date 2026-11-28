@@ -163,3 +163,22 @@ test("notes stop at 50,000 letters; at most 50 things ring (alarms + timed remin
   const many = Array.from({ length: 70 }, (_, i) => ({ id: `a${i}`, time: "07:00", label: "", days: [], on: true }));
   assert.equal(cleanDoc({ v: 1, state: { habits: [], checks: {}, logs: {}, salah: {}, startBalance: 0, alarms: many }, settings: {} }).state.alarms.length, 50);
 });
+
+test("sticky notes are cleaned", async () => {
+  const { cleanStickies, MAX_STICKIES } = await import("./doc.js");
+  const doc = { type: "doc", content: [
+    { type: "paragraph", content: [{ type: "text", text: "Hi", marks: [{ type: "bold" }, { type: "link", attrs: { href: "javascript:x" } }, { type: "strike" }] }] },
+    { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "milk" }] }] }] },
+    { type: "heading", content: [{ type: "text", text: "dropped" }] },
+    { type: "image", attrs: { src: "x" } },
+  ] };
+  const [n] = cleanStickies([{ id: "s1", x: -50, y: 120.6, w: 5000, h: 10, color: "red", doc, extra: 1 }]);
+  assert.deepEqual(n, { id: "s1", x: 0, y: 121, w: 900, h: 150, color: "yellow", doc: { type: "doc", content: [
+    { type: "paragraph", content: [{ type: "text", text: "Hi", marks: [{ type: "bold" }, { type: "strike" }] }] },
+    { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "milk" }] }] }] },
+  ] } });
+  const long = cleanStickies([{ id: "a", doc: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "x".repeat(9000) }] }] } }]);
+  assert.equal(long[0].doc.content[0].content[0].text.length, 5000);
+  assert.equal(cleanStickies(Array.from({ length: 40 }, (_, i) => ({ id: `n${i}` }))).length, MAX_STICKIES);
+  assert.deepEqual(cleanStickies([{ id: "a" }, { id: "a" }, "junk"]).length, 1);
+});

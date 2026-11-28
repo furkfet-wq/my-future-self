@@ -1,0 +1,83 @@
+/* Sticky notes: Windows Sticky Notes colours and layout (top bar, text, format bar at the bottom) */
+.stk-btn .stk-fold { transition: translate 0.6s var(--rise); }
+.stk-btn:hover .stk-fold { translate: -1px -1px; }
+
+/* one layer at the top-left of the page; notes inside are placed in page pixels. Its z-index keeps every note
+   under the notepad (140), clock and calendar (150) and the alarm (400). */
+.stk-layer { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 110; }
+
+.stk {
+  --paper: #fff7d1; --bar: #fff2ab; --ink: #1b1b1b; --soft: rgba(0, 0, 0, 0.55); --hover: rgba(0, 0, 0, 0.07);
+  position: absolute; display: flex; flex-direction: column; min-width: 200px; min-height: 150px; box-sizing: border-box;
+  background: var(--paper); color: var(--ink); border-radius: 8px; overflow: hidden;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 15px; line-height: 1.45;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: stk-in 0.35s var(--rise); transition: box-shadow 0.25s;
+}
+.stk.moving { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 22px 50px rgba(0, 0, 0, 0.55); }
+@keyframes stk-in { from { opacity: 0; scale: 0.94; } }
+.stk-yellow { --paper: #fff7d1; --bar: #fff2ab; }
+.stk-green { --paper: #e4f9e0; --bar: #cbf1c4; }
+.stk-pink { --paper: #ffe4f1; --bar: #ffcce5; }
+.stk-purple { --paper: #f2e6ff; --bar: #e7cfff; }
+.stk-blue { --paper: #e2f1ff; --bar: #cde9ff; }
+.stk-gray { --paper: #f3f2f1; --bar: #e1dfdd; }
+.stk-charcoal { --paper: #3b3a39; --bar: #323130; --ink: #ffffff; --soft: rgba(255, 255, 255, 0.65); --hover: rgba(255, 255, 255, 0.1); }
+
+.stk-bar { display: flex; align-items: center; gap: 2px; height: 34px; padding: 0 4px; background: var(--bar); cursor: grab; touch-action: none; user-select: none; }
+.stk.moving .stk-bar { cursor: grabbing; }
+.stk-grip { flex: 1; align-self: stretch; }
+.stk-icon { width: 30px; height: 28px; display: grid; place-items: center; border-radius: 6px; color: var(--soft);
+  opacity: 0.55; transition: opacity 0.2s, background 0.2s, color 0.2s; }
+.stk:hover .stk-icon, .stk:focus-within .stk-icon, .stk-icon.on { opacity: 1; }
+.stk-icon:hover, .stk-icon.on { background: var(--hover); color: var(--ink); }
+.stk-icon svg, .stk-fmt svg, .stk-menu-item svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.stk-text { flex: 1; overflow: auto; position: relative; }
+.stk-text .ProseMirror { min-height: 100%; box-sizing: border-box; padding: 10px 14px 12px; outline: none; color: var(--ink);
+  caret-color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.stk-text .ProseMirror p { margin: 0 0 0.25em; }
+.stk-text .ProseMirror ul { margin: 0 0 0.25em; padding-left: 1.3em; }
+.stk-text .ProseMirror li p { margin: 0; }
+.stk-text .ProseMirror ::selection { background: rgba(0, 120, 212, 0.28); }
+/* "Take a note…" while the note is empty */
+.stk-text:has(.ProseMirror > p:only-child > br.ProseMirror-trailingBreak:only-child)::before {
+  content: "Take a note…"; position: absolute; left: 14px; top: 10px; color: var(--soft); pointer-events: none; }
+.stk-msg { margin: 0; padding: 2px 14px 6px; font-size: 12px; color: #c42b1c; }
+.stk-charcoal .stk-msg { color: #ff99a4; }
+
+/* format bar: shows while you write in the note (like Windows) */
+.stk-tools { display: flex; gap: 2px; padding: 4px 6px; border-top: 1px solid rgba(0, 0, 0, 0.08);
+  max-height: 0; padding-block: 0; opacity: 0; overflow: hidden; transition: max-height 0.25s ease, opacity 0.2s, padding 0.25s; }
+.stk-charcoal .stk-tools { border-top-color: rgba(255, 255, 255, 0.12); }
+.stk:focus-within .stk-tools { max-height: 44px; padding-block: 4px; opacity: 1; }
+.stk-fmt { min-width: 32px; height: 30px; padding: 0 6px; border-radius: 6px; display: grid; place-items: center; color: var(--ink); font-size: 15px;
+  transition: background 0.15s; }
+.stk-fmt:hover { background: var(--hover); }
+.stk-fmt.on { background: var(--hover); box-shadow: inset 0 -2px 0 currentColor; }
+
+.stk-resize { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 55%, var(--soft) 55%, var(--soft) 62%, transparent 62%, transparent 74%, var(--soft) 74%, var(--soft) 81%, transparent 81%);
+  opacity: 0.45; }
+.stk-resize:hover { opacity: 0.9; }
+
+/* ⋯ menu: colours + delete, slides down over the top of the note */
+.stk-menu { position: absolute; left: 0; right: 0; top: 34px; z-index: 2; padding: 10px; background: var(--bar);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18); animation: stk-menu 0.25s var(--rise); }
+@keyframes stk-menu { from { opacity: 0; translate: 0 -8px; } }
+.stk-colours { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 8px; }
+.stk-swatch { aspect-ratio: 1; border-radius: 6px; background: var(--paper); border: 1px solid rgba(0, 0, 0, 0.15); transition: scale 0.2s; }
+.stk-swatch:hover { scale: 1.08; }
+.stk-swatch.on { box-shadow: 0 0 0 2px var(--ink, #000); }
+.stk-charcoal .stk-swatch.on { box-shadow: 0 0 0 2px #fff; }
+.stk-menu-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 6px; color: var(--ink); font-size: 14px; text-align: left; }
+.stk-menu-item:hover { background: var(--hover); }
+.stk-ask { display: grid; gap: 8px; color: var(--ink); font-size: 14px; }
+.stk-ask div { display: flex; gap: 8px; }
+.stk-ask button { flex: 1; padding: 7px; border-radius: 6px; font-weight: 600; border: 1px solid rgba(0, 0, 0, 0.2); color: var(--ink); }
+.stk-charcoal .stk-ask button { border-color: rgba(255, 255, 255, 0.3); }
+.stk-ask button:hover { background: var(--hover); }
+.stk-ask .stk-del { background: #c42b1c; border-color: #c42b1c; color: #fff; }
+.stk-ask .stk-del:hover { background: #a32416; }
+
+@media (prefers-reduced-motion: reduce) { .stk, .stk-menu { animation: none; } }

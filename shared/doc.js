@@ -123,6 +123,61 @@ export function cleanReminders(days, ringRoom = MAX_ALARMS) {
   return out;
 }
 
+// Sticky notes on the page: [{ id, x, y, w, h, color, doc }] (x / y in page pixels, doc = rich text).
+// Text: paragraphs and bullet lists; bold, italic, underline, strikethrough. Nothing else is kept.
+export const STICKY_COLOURS = ["yellow", "green", "pink", "purple", "blue", "gray", "charcoal"];
+export const MAX_STICKIES = 30;
+export const STICKY_MAX_CHARS = 5000;
+const STICKY_MARKS = ["bold", "italic", "underline", "strike"];
+function cleanStickyInline(node, room) {
+  if (!isObj(node)) return null;
+  if (node.type === "hardBreak") return { type: "hardBreak" };
+  if (node.type !== "text" || typeof node.text !== "string" || !node.text || room.left <= 0) return null;
+  const text = node.text.slice(0, room.left);
+  room.left -= text.length;
+  const seen = new Set();
+  const marks = (Array.isArray(node.marks) ? node.marks : []).filter((m) => isObj(m) && STICKY_MARKS.includes(m.type) && !seen.has(m.type) && seen.add(m.type)).map((m) => ({ type: m.type }));
+  return marks.length ? { type: "text", text, marks } : { type: "text", text };
+}
+function cleanStickyPara(block, room) {
+  const inner = (Array.isArray(block?.content) ? block.content : []).map((n) => cleanStickyInline(n, room)).filter(Boolean);
+  return inner.length ? { type: "paragraph", content: inner } : { type: "paragraph" };
+}
+export function cleanStickyDoc(doc) {
+  const room = { left: STICKY_MAX_CHARS };
+  const content = [];
+  for (const block of isObj(doc) && doc.type === "doc" && Array.isArray(doc.content) ? doc.content.slice(0, 500) : []) {
+    if (!isObj(block)) continue;
+    if (block.type === "paragraph") content.push(cleanStickyPara(block, room));
+    else if (block.type === "bulletList" && Array.isArray(block.content)) {
+      const items = block.content
+        .filter((li) => isObj(li) && li.type === "listItem")
+        .slice(0, 200)
+        .map((li) => ({ type: "listItem", content: [cleanStickyPara((Array.isArray(li.content) ? li.content : []).find((p) => isObj(p) && p.type === "paragraph"), room)] }));
+      if (items.length) content.push({ type: "bulletList", content: items });
+    }
+  }
+  return { type: "doc", content: content.length ? content : [{ type: "paragraph" }] };
+}
+export function cleanStickies(list) {
+  const out = [];
+  const num = (v, lo, hi, d) => (typeof v === "number" && Number.isFinite(v) ? Math.round(Math.min(hi, Math.max(lo, v))) : d);
+  for (const n of Array.isArray(list) ? list : []) {
+    if (out.length >= MAX_STICKIES) break;
+    if (!isObj(n) || typeof n.id !== "string" || !n.id || n.id.length > 24 || out.some((o) => o.id === n.id)) continue;
+    out.push({
+      id: n.id,
+      x: num(n.x, 0, 20000, 40),
+      y: num(n.y, 0, 100000, 40),
+      w: num(n.w, 200, 900, 300),
+      h: num(n.h, 150, 900, 300),
+      color: STICKY_COLOURS.includes(n.color) ? n.color : "yellow",
+      doc: cleanStickyDoc(n.doc),
+    });
+  }
+  return out;
+}
+
 // The chosen place keeps no coordinates: only its name and the prayer-times city (privacy).
 function cleanPlace(p) {
   if (!isObj(p) || !Number.isInteger(p.cityId) || p.cityId <= 0) return undefined;
@@ -181,6 +236,7 @@ export function cleanDoc(doc) {
       notes: cleanNotes(s.notes),
       alarms,
       reminders: cleanReminders(s.reminders, MAX_ALARMS - alarms.length),
+      stickies: cleanStickies(s.stickies),
     },
     settings,
   };

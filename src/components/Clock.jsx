@@ -336,7 +336,8 @@ function Timer({ timer, setTimer }) {
 function Stopwatch({ sw, setSw }) {
   const running = sw.startedAt != null;
   const now = useTick(running ? 250 : 60000); // whole seconds only: no need to redraw 60 times a second
-  const elapsed = stopwatchElapsed(sw, running ? now : 0);
+  // never less than the time already banked: the last tick can be a moment older than the Start press
+  const elapsed = Math.max(sw.banked || 0, stopwatchElapsed(sw, running ? Math.max(now, sw.startedAt) : 0));
   const { d, h, m, s } = splitDHMS(elapsed);
   const laps = sw.laps || [];
   const lapTimes = laps.map((t, i) => t - (laps[i - 1] || 0));
@@ -357,7 +358,8 @@ function Stopwatch({ sw, setSw }) {
       <div className={`tm-ring sw-ring${running ? " live" : ""}`}>
         <svg viewBox="0 0 300 300" aria-hidden="true">
           <circle cx="150" cy="150" r={R} className="tm-track" />
-          <circle cx="150" cy="150" r={R} className="tm-left" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - secFrac) }} />
+          {/* a new circle every minute: it starts again from empty instead of sliding back round */}
+          <circle key={elapsed ? Math.floor(elapsed / 60000) : "reset"} cx="150" cy="150" r={R} className="tm-left" style={{ strokeDasharray: C, strokeDashoffset: C * (1 - secFrac) }} />
         </svg>
         <div className="tm-center">
           <span className="tm-label">{running ? "Running" : elapsed ? "Stopped" : "Stopwatch"}</span>

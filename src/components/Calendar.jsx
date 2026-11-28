@@ -5,12 +5,7 @@ import { REMINDER_NAME_MAX, REMINDER_TEXT_MAX, MAX_REMINDERS, MAX_ALARMS, ringin
 import "./calendar.css";
 
 const MONTHS_AHEAD = 12;
-const JUMPS = [
-  [0, "Now"],
-  [3, "+3 months"],
-  [6, "+6 months"],
-  [12, "+12 months"],
-];
+const JUMP_MONTHS = 5; // shortcuts: this month and the next 4, by name (e.g. November, December, January…)
 
 /* Calendar button: the top page flips over on hover. */
 export function CalendarButton({ onClick }) {
@@ -113,11 +108,15 @@ export function Calendar({ reminders, onReminders, onClose, startKey, alarmCount
         <div className="cal-head">
           <b>Calendar</b>
           <div className="cal-jumps" role="group" aria-label="Jump to">
-            {JUMPS.map(([o, label]) => (
-              <button key={o} className={`cal-jump${offset === o ? " on" : ""}`} onClick={() => goMonth(o)}>
-                {label}
-              </button>
-            ))}
+            {Array.from({ length: JUMP_MONTHS }, (_, o) => {
+              const m = new Date(today.getFullYear(), today.getMonth() + o, 1);
+              return (
+                <button key={o} className={`cal-jump${offset === o ? " on" : ""}`} onClick={() => goMonth(o)}>
+                  {MONTH_NAMES[m.getMonth()]}
+                  {m.getFullYear() !== today.getFullYear() && <small> {m.getFullYear()}</small>}
+                </button>
+              );
+            })}
           </div>
           <button className="np-icon" onClick={onClose} aria-label="Close calendar" title="Close">
             ×

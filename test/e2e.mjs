@@ -54,7 +54,7 @@ test("logout ends the session", async () => {
 
 // ---- Task 4: saved data ----
 let USER; // the account each test is signed in as
-const doc = (n) => ({ v: 1, state: { habits: [{ id: "h", name: `Habit ${n}` }], checks: {}, logs: {}, salah: {}, startBalance: n, notes: null, alarms: [], reminders: {} }, settings: {} });
+const doc = (n) => ({ v: 1, state: { habits: [{ id: "h", name: `Habit ${n}` }], checks: {}, logs: {}, salah: {}, startBalance: n, notes: null, alarms: [], reminders: {}, stickies: [] }, settings: {} });
 
 test("new account has no data", async () => {
   const cookie = await signIn((USER = "d1"));

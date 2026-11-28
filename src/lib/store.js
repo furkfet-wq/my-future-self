@@ -19,6 +19,7 @@ function seed() {
     notes: null,
     alarms: [],
     reminders: {},
+    stickies: [],
   };
 }
 
@@ -44,6 +45,7 @@ function clean(s) {
     notes: s.notes && typeof s.notes === "object" ? s.notes : null,
     alarms: Array.isArray(s.alarms) ? s.alarms : [],
     reminders: s.reminders && typeof s.reminders === "object" && !Array.isArray(s.reminders) ? s.reminders : {},
+    stickies: Array.isArray(s.stickies) ? s.stickies : [],
   };
 }
 
@@ -106,6 +108,8 @@ function reducer(state, action) {
     }
     case "setNotes":
       return { ...state, notes: action.notes };
+    case "setStickies":
+      return { ...state, stickies: action.stickies };
     case "setReminders":
       return { ...state, reminders: action.reminders };
     case "setAlarms":
@@ -143,6 +147,7 @@ export function useStore() {
     setNotes: (notes) => dispatch({ type: "setNotes", notes }),
     setAlarms: (alarms) => dispatch({ type: "setAlarms", alarms }),
     setReminders: (reminders) => dispatch({ type: "setReminders", reminders }),
+    setStickies: (stickies) => dispatch({ type: "setStickies", stickies }),
   };
   return [state, actions];
 }

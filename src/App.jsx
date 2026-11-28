@@ -351,9 +351,22 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
   useEffect(() => {
     if (!ring) return undefined;
     alarmStart("ring"); // like the prayer alarm: siren, red blinking page, spinning cube
-    window.scrollTo({ top: 0, behavior: "smooth" });
     return () => alarmStop("ring");
   }, [ring]);
+
+  // Any alarm starts ringing (prayer, clock alarm, timer, reminder): close the windows that cover the cube
+  // (notes are already saved) and bring the cube to the middle of the screen.
+  useEffect(() => {
+    const onAlarm = (e) => {
+      if (!e.detail) return;
+      setClockOpen(false);
+      setCalendarAt(null);
+      setNotepadOpen(false);
+      requestAnimationFrame(() => document.querySelector(".hero .rk")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+    };
+    window.addEventListener("mfs:alarm", onAlarm);
+    return () => window.removeEventListener("mfs:alarm", onAlarm);
+  }, []);
 
   function shiftMonth(delta) {
     const d = new Date(year, month0 + delta, 1);

@@ -225,8 +225,7 @@ export function PrayerAlarm({ state, prayer, onPrayed, enabled = true, test = 0,
   useEffect(() => {
     if (targetId && active.current !== targetId) {
       active.current = targetId;
-      alarmStart("prayer"); // siren, red page and spinning cube (stops only when no other alarm rings)
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      alarmStart("prayer"); // siren, red page, spinning cube, and the page moves to the cube (App.jsx)
     } else if (!targetId && active.current) {
       active.current = null;
       alarmStop("prayer");

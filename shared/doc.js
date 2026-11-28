@@ -252,6 +252,7 @@ export function cleanDoc(doc) {
       checks: cleanTicks(s.checks),
       logs: cleanLogs(s.logs),
       salah: cleanTicks(s.salah),
+      crosses: cleanTicks(s.crosses), // right-click X on a habit: means nothing, stats ignore it
       startBalance: typeof s.startBalance === "number" && Number.isFinite(s.startBalance) ? s.startBalance : 0,
       notes: cleanNotes(s.notes), // before tabs: the one note (moved into tab 1 by the app)
       noteTabs: cleanNoteTabs(s.noteTabs),

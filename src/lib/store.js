@@ -21,6 +21,7 @@ function seed() {
     reminders: {},
     stickies: [],
     noteTabs: [],
+    crosses: {},
   };
 }
 
@@ -48,7 +49,19 @@ function clean(s) {
     reminders: s.reminders && typeof s.reminders === "object" && !Array.isArray(s.reminders) ? s.reminders : {},
     stickies: Array.isArray(s.stickies) ? s.stickies : [],
     noteTabs: Array.isArray(s.noteTabs) ? s.noteTabs : [],
+    crosses: s.crosses && typeof s.crosses === "object" ? s.crosses : {},
   };
+}
+
+// one day's { id: true } map with `id` set or removed (empty days are dropped)
+function setMark(all, key, id, on) {
+  const day = { ...((all || {})[key] || {}) };
+  if (on) day[id] = true;
+  else delete day[id];
+  const out = { ...(all || {}) };
+  if (Object.keys(day).length) out[key] = day;
+  else delete out[key];
+  return out;
 }
 
 function reducer(state, action) {
@@ -61,7 +74,13 @@ function reducer(state, action) {
       const checks = { ...state.checks };
       if (Object.keys(day).length) checks[key] = day;
       else delete checks[key];
-      return { ...state, checks };
+      return { ...state, checks, crosses: setMark(state.crosses, key, id, false) }; // a tick replaces an X
+    }
+    case "cross": {
+      // right-click: X on / off. An X means nothing (not done, not missed); it replaces a tick.
+      const { key, id } = action;
+      const on = !state.crosses?.[key]?.[id];
+      return { ...state, crosses: setMark(state.crosses, key, id, on), checks: on ? setMark(state.checks, key, id, false) : state.checks };
     }
     case "addHabit": {
       const name = action.name.trim();
@@ -154,6 +173,7 @@ export function useStore() {
     setReminders: (reminders) => dispatch({ type: "setReminders", reminders }),
     setStickies: (stickies) => dispatch({ type: "setStickies", stickies }),
     setNoteTabs: (tabs) => dispatch({ type: "setNoteTabs", tabs }),
+    cross: (key, id) => dispatch({ type: "cross", key, id }),
   };
   return [state, actions];
 }

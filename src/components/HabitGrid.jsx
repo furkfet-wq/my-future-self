@@ -85,6 +85,15 @@ export default function HabitGrid({
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) pop(e);
   }
 
+  // right-click a habit box: X on / off. An X means nothing (not done, not missed); stats ignore it.
+  function cross(e, key, id) {
+    e.preventDefault();
+    sfx.undone();
+    actions.cross(key, id);
+    if (key.startsWith(`${year}-${String(month0 + 1).padStart(2, "0")}-`)) onSelect(key);
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) pop(e);
+  }
+
   function submitHabit(e) {
     e.preventDefault();
     if (!newName.trim()) return;
@@ -226,6 +235,8 @@ export default function HabitGrid({
               setEditId(null);
             }}
             onToggle={toggle}
+            crosses={rows ? null : state.crosses || {}}
+            onCross={rows ? null : cross}
             onRemove={() => remove(h.id)}
           />
         ))}
@@ -252,7 +263,7 @@ export default function HabitGrid({
   );
 }
 
-function HabitRow({ r, h, info, editable, weeks, month0, checks, selectedKey, confirming, editing, dropMark, onPress, onRename, onToggle, onRemove }) {
+function HabitRow({ r, h, info, editable, weeks, month0, checks, crosses, selectedKey, confirming, editing, dropMark, onPress, onRename, onToggle, onCross, onRemove }) {
   return (
     <>
       <div
@@ -297,17 +308,21 @@ function HabitRow({ r, h, info, editable, weeks, month0, checks, selectedKey, co
           if (!d) return <div className={`hg-cell off${wk}`} key={`${w}-${i}`} data-row={r}><span className="hg-box" /></div>;
           const key = dateKey(d);
           const done = !!checks[key]?.[h.id];
+          const crossed = !done && !!crosses?.[key]?.[h.id];
           return (
             <div className={`hg-cell${wk}${d.getMonth() !== month0 ? " out" : ""}${key === selectedKey ? " sel" : ""}`} key={`${w}-${i}`} data-row={r}>
               <button
-                className={`hg-box${done ? " done" : ""}`}
+                className={`hg-box${done ? " done" : ""}${crossed ? " crossed" : ""}`}
                 data-sfx="own"
                 onClick={(e) => onToggle(e, key, h.id)}
+                onContextMenu={onCross ? (e) => onCross(e, key, h.id) : undefined}
+                title={onCross ? "Click: done. Right-click: X (means nothing)" : undefined}
                 role="checkbox"
                 aria-checked={done}
                 aria-label={`${h.name} on ${d.toDateString()}`}
               >
                 {done && <svg className="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
+                {crossed && <svg className="cross" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg>}
               </button>
             </div>
           );

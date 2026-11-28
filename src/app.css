@@ -476,6 +476,10 @@ button.ad-tr:hover { background: var(--soft); translate: 0 -2px; }
 .hg-compact .tick { stroke-width: 4; }
 @keyframes tick-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) { .tick { animation: none; } }
+/* right-click X on a habit box: means nothing (not done, not missed). The box stays white, a black X is drawn in. */
+.cross { width: 70%; height: 70%; fill: none; stroke: #000; stroke-width: 3.4; stroke-linecap: round;
+  stroke-dasharray: 15; stroke-dashoffset: 0; animation: tick-draw 0.3s ease-out both; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .cross { animation: none; } }
 .hx-streaks { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 
 /* today's date in the habit and salah grids: yellow highlight (wins over the white "selected" look) */

@@ -43,6 +43,47 @@
 .np-sw.on { box-shadow: 0 0 0 2px var(--fg); }
 .np-sw-none { background: linear-gradient(135deg, transparent 45%, #ff6a6a 45%, #ff6a6a 55%, transparent 55%), #000; border-radius: 5px; }
 
+/* Rainbow swatch (more colours): colours cycle on hover (the button itself never moves); shows the chosen colour in its middle */
+.np-sw-rainbow { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); position: relative; }
+.np-sw-rainbow::after { content: ""; position: absolute; inset: 4px; border-radius: inherit; background: var(--c, transparent); }
+.np-sw-rainbow:hover::after { animation: np-cycle 2.4s linear infinite reverse; } /* the chosen colour stays the same */
+.np-sw-rainbow:hover { animation: np-cycle 2.4s linear infinite; }
+@keyframes np-cycle { to { filter: hue-rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .np-sw-rainbow:hover { animation: none; } }
+
+/* Colour menu */
+.colm { position: fixed; z-index: 160; width: 300px; box-sizing: border-box; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  background: #000; color: #fff; border: var(--stroke) solid var(--fg); border-radius: 16px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+  animation: np-in 0.3s var(--rise); user-select: none; }
+.colm-title { font-size: 14px; font-weight: 900; }
+.colm-top { display: flex; gap: 10px; }
+.colm-sv { position: relative; flex: 1; height: 150px; border-radius: 10px; cursor: crosshair; touch-action: none; outline: none;
+  background: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, var(--hue)); }
+.colm-sv:focus-visible, .colm-hue:focus-visible { box-shadow: 0 0 0 2px var(--fg); }
+.colm-sv i, .colm-hue i { position: absolute; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #000, 0 2px 6px rgba(0, 0, 0, 0.6); translate: -50% -50%; pointer-events: none; }
+.colm-side { width: 82px; display: flex; flex-direction: column; gap: 8px; }
+.colm-preview { height: 72px; border-radius: 10px; border: var(--stroke) solid var(--line); }
+.colm-hex { display: flex; flex-direction: column; gap: 3px; }
+.colm-hex span, .colm-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.colm-hex input { width: 100%; box-sizing: border-box; background: #000; color: #fff; border: var(--stroke) solid var(--line); border-radius: 8px;
+  padding: 6px 7px; font: inherit; font-size: 13px; font-variant-numeric: tabular-nums; }
+.colm-hex input:focus { outline: none; border-color: var(--fg); }
+.colm-hue { position: relative; height: 14px; border-radius: 999px; cursor: pointer; touch-action: none; outline: none;
+  background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red); }
+.colm-hue i { top: 50%; }
+.colm-dots { display: grid; grid-template-columns: repeat(12, 1fr); gap: 5px; }
+.colm-dot { aspect-ratio: 1; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.25); transition: translate 0.4s var(--rise), box-shadow 0.2s; }
+.colm-dot:hover { translate: 0 -2px; box-shadow: 0 0 0 1px var(--fg); }
+.colm-dot.on { box-shadow: 0 0 0 2px var(--fg); }
+.colm-empty { border-style: dashed; }
+.colm-empty:hover { translate: none; box-shadow: none; }
+.colm-foot { display: flex; gap: 8px; margin-top: 2px; }
+.colm-btn { flex: 1; padding: 9px; border-radius: 999px; font-weight: 800; border: var(--stroke) solid var(--line);
+  transition: border-color 0.2s, translate 0.5s var(--rise); }
+.colm-btn:hover { border-color: var(--fg); translate: 0 -2px; }
+.colm-ok { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
 .np-msg { margin: 0; padding: 6px 18px; font-size: 13px; color: #ff6a6a; }
 .np-editor { flex: 1; overflow: auto; }
 .np-editor .ProseMirror { min-height: 100%; box-sizing: border-box; padding: 18px 22px 40px; outline: none; color: #fff;

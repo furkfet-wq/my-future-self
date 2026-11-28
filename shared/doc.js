@@ -26,6 +26,9 @@ export const NOTE_HIGHLIGHTS = ["#ffd84c", "#6ee07a", "#4cc3ff", "#ff7ac8", "#ff
 export const NOTE_MAX_BYTES = 300_000;
 export const MAX_ALARMS = 30;
 const TEXT_STYLE = { color: NOTE_COLOURS, fontSize: NOTE_SIZES, fontFamily: NOTE_FONTS };
+// Text and highlight colours: one of the toolbar's, or any colour from the colour menu as exactly "#rrggbb"
+// (lower case, nothing else, so it can never carry anything but a colour into the page).
+const okColour = (allowed, c) => allowed.includes(c) || (typeof c === "string" && /^#[0-9a-f]{6}$/.test(c));
 
 function cleanMarks(marks) {
   const out = [];
@@ -34,10 +37,10 @@ function cleanMarks(marks) {
     if (!isObj(m) || seen.has(m.type)) continue;
     let mark = null;
     if (m.type === "bold" || m.type === "italic" || m.type === "underline") mark = { type: m.type };
-    else if (m.type === "highlight" && NOTE_HIGHLIGHTS.includes(m.attrs?.color)) mark = { type: "highlight", attrs: { color: m.attrs.color } };
+    else if (m.type === "highlight" && okColour(NOTE_HIGHLIGHTS, m.attrs?.color)) mark = { type: "highlight", attrs: { color: m.attrs.color } };
     else if (m.type === "textStyle" && isObj(m.attrs)) {
       const attrs = {};
-      for (const [k, allowed] of Object.entries(TEXT_STYLE)) if (allowed.includes(m.attrs[k])) attrs[k] = m.attrs[k];
+      for (const [k, allowed] of Object.entries(TEXT_STYLE)) if (k === "color" ? okColour(allowed, m.attrs[k]) : allowed.includes(m.attrs[k])) attrs[k] = m.attrs[k];
       if (Object.keys(attrs).length) mark = { type: "textStyle", attrs };
     }
     if (mark) {

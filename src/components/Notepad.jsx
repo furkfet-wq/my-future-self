@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ColourMenu } from "./ColourMenu.jsx";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TextStyle, Color, FontFamily, FontSize } from "@tiptap/extension-text-style";
@@ -56,6 +58,25 @@ const stripPaste = (html) =>
     .replace(/\sstyle\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/<img[^>]*>/gi, "");
 
+const MENU_W = 300; // colour menu size (see notepad.css .cm)
+const MENU_H = 450;
+
+/* Rainbow swatch: opens the colour menu. Shows the chosen colour in its middle when it is not one of the swatches. */
+function Rainbow({ kind, current, palette, open, onOpen }) {
+  const custom = current && !palette.includes(current) ? current : null;
+  const name = kind === "color" ? "Text colour" : "Highlight";
+  return (
+    <button
+      className={`np-sw np-sw-rainbow${kind === "highlight" ? " np-sw-hl" : ""}${custom ? " on" : ""}`}
+      style={custom ? { "--c": custom } : undefined}
+      onClick={(e) => onOpen(kind, e.currentTarget)}
+      aria-label={`${name}: more colours`}
+      aria-expanded={open}
+      title="More colours"
+    />
+  );
+}
+
 /* A labelled group of tools in the notepad toolbar: the small label sits above the tools. */
 const Group = ({ label, children }) => (
   <span className="np-group">
@@ -71,6 +92,8 @@ export function Notepad({ notes, onNotes, onClose }) {
   const [win, setWinState] = useState(loadWin);
   const [full, setFull] = useState(false);
   const [saved, setSaved] = useState(true);
+  const [menu, setMenu] = useState(null); // open colour menu: { kind: "color" | "highlight", pos }
+  const closeMenu = useCallback(() => setMenu(null), []);
   const [msg, setMsg] = useState("");
   const [, force] = useState(0);
   const onNotesRef = useRef(onNotes);
@@ -190,6 +213,15 @@ export function Notepad({ notes, onNotes, onClose }) {
   const hl = editor?.getAttributes("highlight") || {};
   const chain = () => editor.chain().focus();
 
+  // the colour menu opens under its rainbow button (above it when there is no room), always on screen
+  const openMenu = (kind, btn) => {
+    if (menu?.kind === kind) return setMenu(null);
+    const r = btn.getBoundingClientRect();
+    const x = Math.max(8, Math.min(r.left - 140, innerWidth - MENU_W - 8));
+    const y = r.bottom + 8 + MENU_H > innerHeight ? Math.max(8, r.top - MENU_H - 8) : r.bottom + 8;
+    setMenu({ kind, pos: { x, y } });
+  };
+
   return (
     <div className={`np${full ? " np-full" : ""}`} style={style} role="dialog" aria-modal="false" aria-label="Notepad">
       <div className="np-bar" onPointerDown={(e) => !e.target.closest("button") && drag(e, "move")}>
@@ -252,6 +284,7 @@ export function Notepad({ notes, onNotes, onClose }) {
                 title={`Text colour: ${COLOUR_NAMES[i]}`}
               />
             ))}
+            <Rainbow kind="color" current={ts.color} palette={NOTE_COLOURS} open={menu?.kind === "color"} onOpen={openMenu} />
           </span>
           </Group>
           <span className="np-sep" />
@@ -268,6 +301,7 @@ export function Notepad({ notes, onNotes, onClose }) {
                 title={`Highlight: ${HIGHLIGHT_NAMES[i]}`}
               />
             ))}
+            <Rainbow kind="highlight" current={hl.color} palette={NOTE_HIGHLIGHTS} open={menu?.kind === "highlight"} onOpen={openMenu} />
           </span>
           </Group>
           <span className="np-sep" />
@@ -288,6 +322,23 @@ export function Notepad({ notes, onNotes, onClose }) {
         </p>
       )}
       <EditorContent editor={editor} className="np-editor" />
+      {menu &&
+        editor &&
+        createPortal(
+        <ColourMenu
+          key={menu.kind}
+          title={menu.kind === "color" ? "Text colour" : "Highlight colour"}
+          start={menu.kind === "color" ? ts.color || "#ffffff" : hl.color || "#ffd84c"}
+          pos={menu.pos}
+          onClose={closeMenu}
+          onPick={(c) => {
+            if (menu.kind === "color") chain().setColor(c).run();
+            else chain().setHighlight({ color: c }).run();
+            closeMenu();
+          }}
+        />,
+          document.body
+        )}
       {!full && <div className="np-resize" onPointerDown={(e) => drag(e, "se")} aria-hidden="true" title="Drag to resize" />}
       {!full &&
         ["n", "s", "e", "w", "ne", "nw", "sw"].map((d) => (

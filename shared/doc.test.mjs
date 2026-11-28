@@ -136,3 +136,14 @@ test("place keeps no coordinates (privacy)", () => {
   const place = { name: "My location", region: "", country: "", lat: 41.0123, lon: 28.9765, cityId: 5041, km: 2 };
   assert.deepEqual(cleanDoc({ ...good(), settings: { place } }).settings.place, { name: "My location", region: "", country: "", cityId: 5041, km: 2 });
 });
+
+test("notes keep colour-menu colours only as exact #rrggbb", async () => {
+  const { cleanNotes } = await import("./doc.js");
+  const one = (marks) => cleanNotes({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "x", marks }] }] }).content[0].content[0].marks;
+  assert.deepEqual(one([{ type: "textStyle", attrs: { color: "#1a2b3c" } }]), [{ type: "textStyle", attrs: { color: "#1a2b3c" } }]);
+  assert.deepEqual(one([{ type: "highlight", attrs: { color: "#abcdef" } }]), [{ type: "highlight", attrs: { color: "#abcdef" } }]);
+  for (const bad of ["#ABCDEF", "#abc", "#abcdef;x", "rgb(1,2,3)", "url(x)", 5]) {
+    assert.equal(one([{ type: "textStyle", attrs: { color: bad } }]), undefined, String(bad));
+    assert.equal(one([{ type: "highlight", attrs: { color: bad } }]), undefined, String(bad));
+  }
+});

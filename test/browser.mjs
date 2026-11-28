@@ -352,6 +352,9 @@ test("Muslim mode off hides every Islamic part and on brings it back", async () 
 
 // ---- Clock ----
 async function openClock(page) {
+  // the fake prayer times can make a prayer alarm ring at certain times of day; its banner covers the clock tabs
+  const stop = page.locator(".alarm .alarm-stop");
+  if (await stop.count()) await stop.click();
   await page.locator(".clk-btn").click();
   await page.getByRole("dialog", { name: "Clock" }).waitFor();
 }

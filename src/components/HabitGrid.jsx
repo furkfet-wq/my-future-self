@@ -315,9 +315,7 @@ function HabitRow({ r, h, info, editable, weeks, month0, checks, crosses, select
                 className={`hg-box${done ? " done" : ""}${crossed ? " crossed" : ""}`}
                 data-sfx="own"
                 onClick={(e) => onToggle(e, key, h.id)}
-                onContextMenu={onCross ? (e) => onCross(e, key, h.id) : undefined}
-                title={onCross ? "Click: done. Right-click: X (means nothing)" : undefined}
-                role="checkbox"
+                onContextMenu={onCross ? (e) => onCross(e, key, h.id) : undefined}                role="checkbox"
                 aria-checked={done}
                 aria-label={`${h.name} on ${d.toDateString()}`}
               >

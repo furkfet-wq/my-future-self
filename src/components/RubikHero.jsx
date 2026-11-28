@@ -377,7 +377,24 @@ export default function RubikHero() {
         .to(shell.position, { x: 0, y: 0, z: 0, duration: 1.3, ease: "power3.out", delay: 0.25 });
     }
 
+    // Only presses near the cube count (the canvas is much bigger than the cube). The cube's centre is projected
+    // onto the screen; anything within HIT_R world units of it is "on the cube". 1.53 = half a face, 2.65 = a corner:
+    // 2.1 sits between, so a press must be close to the cube, without being pixel-perfect while it turns.
+    const HIT_R = 2.1;
+    const centre = new THREE.Vector3();
+    const onCube = (e) => {
+      const r = canvas.getBoundingClientRect();
+      shell.getWorldPosition(centre);
+      const dist = camera.position.distanceTo(centre);
+      const p = centre.clone().project(camera);
+      const cx = r.left + ((p.x + 1) / 2) * r.width;
+      const cy = r.top + ((1 - p.y) / 2) * r.height;
+      const radiusPx = (HIT_R / (dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)))) * (r.height / 2);
+      return Math.hypot(e.clientX - cx, e.clientY - cy) <= radiusPx;
+    };
+
     const onDown = (e) => {
+      if (!onCube(e)) return;
       drag.on = true;
       drag.sx = e.clientX;
       drag.sy = e.clientY;
@@ -390,10 +407,16 @@ export default function RubikHero() {
       canvas.setPointerCapture(e.pointerId);
       el.classList.add("grabbing", "used");
     };
+    // how far the cube turns per pixel of mouse movement (0.009 before; 30% stiffer = 0.0063). The glide after
+    // letting go is measured from this, so it keeps the same feel.
+    const TURN_PER_PX = 0.0063;
     const onMove = (e) => {
-      if (!drag.on) return;
-      const dx = (e.clientX - drag.x) * 0.009;
-      const dy = (e.pointerType === "touch" ? 0 : e.clientY - drag.y) * 0.009;
+      if (!drag.on) {
+        if (e.pointerType === "mouse") el.classList.toggle("near", onCube(e)); // grab hand only over the cube
+        return;
+      }
+      const dx = (e.clientX - drag.x) * TURN_PER_PX;
+      const dy = (e.pointerType === "touch" ? 0 : e.clientY - drag.y) * TURN_PER_PX;
       drag.x = e.clientX;
       drag.y = e.clientY;
       const t = performance.now();
@@ -422,6 +445,8 @@ export default function RubikHero() {
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
     canvas.addEventListener("pointercancel", onUp);
+    const onLeave = () => el.classList.remove("near");
+    canvas.addEventListener("pointerleave", onLeave);
 
     const t0 = performance.now();
     const HOME = new THREE.Quaternion();
@@ -500,6 +525,7 @@ export default function RubikHero() {
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointerleave", onLeave);
       canvas.removeEventListener("pointercancel", onUp);
       gsap.ticker.remove(frame);
       turnTween?.kill();

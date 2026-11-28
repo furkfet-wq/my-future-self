@@ -345,7 +345,8 @@ button.ad-tr:hover { background: var(--soft); translate: 0 -2px; }
 .snd[aria-pressed="false"] { border-color: var(--line); color: var(--dim); }
 
 /* draggable cube */
-.rk canvas { cursor: grab; touch-action: pan-y; }
+.rk canvas { touch-action: pan-y; }
+.rk.near canvas { cursor: grab; } /* only over the cube itself (RubikHero onCube) */
 .rk.grabbing canvas { cursor: grabbing; }
 .rk-hint { position: absolute; left: 50%; bottom: 14px; translate: -50% 0; font-size: 12px; color: var(--dim); pointer-events: none; transition: opacity 0.8s ease; }
 .rk.used .rk-hint { opacity: 0; }

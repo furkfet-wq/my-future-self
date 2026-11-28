@@ -55,6 +55,16 @@ const stripPaste = (html) =>
     .replace(/\sstyle\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/<img[^>]*>/gi, "");
 
+/* A labelled group of tools in the notepad toolbar: the small label sits above the tools. */
+const Group = ({ label, children }) => (
+  <span className="np-group">
+    <span className="np-lbl" aria-hidden="true">
+      {label}
+    </span>
+    <span className="np-group-tools">{children}</span>
+  </span>
+);
+
 /* The notepad window: black, white text, covers 80% of the screen; move, resize, full size, close. */
 export function Notepad({ notes, onNotes, onClose }) {
   const [win, setWinState] = useState(loadWin);
@@ -183,31 +193,38 @@ export function Notepad({ notes, onNotes, onClose }) {
 
       {editor && (
         <div className="np-tools" role="toolbar" aria-label="Text style">
-          <select aria-label="Font" value={NOTE_FONTS.includes(ts.fontFamily) ? ts.fontFamily : "Archivo"} onChange={(e) => chain().setFontFamily(e.target.value).run()}>
-            {NOTE_FONTS.map((f, i) => (
-              <option key={f} value={f}>
-                {FONT_NAMES[i]}
-              </option>
-            ))}
-          </select>
-          <select aria-label="Text size" value={NOTE_SIZES.includes(ts.fontSize) ? ts.fontSize : DEFAULT_SIZE} onChange={(e) => chain().setFontSize(e.target.value).run()}>
-            {NOTE_SIZES.map((s) => (
-              <option key={s} value={s}>
-                {parseInt(s, 10)}
-              </option>
-            ))}
-          </select>
+          <Group label="Font">
+            <select aria-label="Font" value={NOTE_FONTS.includes(ts.fontFamily) ? ts.fontFamily : "Archivo"} onChange={(e) => chain().setFontFamily(e.target.value).run()}>
+              {NOTE_FONTS.map((f, i) => (
+                <option key={f} value={f}>
+                  {FONT_NAMES[i]}
+                </option>
+              ))}
+            </select>
+          </Group>
+          <Group label="Size">
+            <select aria-label="Text size" value={NOTE_SIZES.includes(ts.fontSize) ? ts.fontSize : DEFAULT_SIZE} onChange={(e) => chain().setFontSize(e.target.value).run()}>
+              {NOTE_SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {parseInt(s, 10)}
+                </option>
+              ))}
+            </select>
+          </Group>
           <span className="np-sep" />
-          <button className={`np-fmt${editor.isActive("bold") ? " on" : ""}`} onClick={() => chain().toggleBold().run()} aria-label="Bold" aria-pressed={editor.isActive("bold")}>
-            <b>B</b>
-          </button>
-          <button className={`np-fmt${editor.isActive("italic") ? " on" : ""}`} onClick={() => chain().toggleItalic().run()} aria-label="Italic" aria-pressed={editor.isActive("italic")}>
-            <i>I</i>
-          </button>
-          <button className={`np-fmt${editor.isActive("underline") ? " on" : ""}`} onClick={() => chain().toggleUnderline().run()} aria-label="Underline" aria-pressed={editor.isActive("underline")}>
-            <u>U</u>
-          </button>
+          <Group label="Style">
+            <button className={`np-fmt${editor.isActive("bold") ? " on" : ""}`} onClick={() => chain().toggleBold().run()} aria-label="Bold" title="Bold" aria-pressed={editor.isActive("bold")}>
+              <b>B</b>
+            </button>
+            <button className={`np-fmt${editor.isActive("italic") ? " on" : ""}`} onClick={() => chain().toggleItalic().run()} aria-label="Italic" title="Italic" aria-pressed={editor.isActive("italic")}>
+              <i>I</i>
+            </button>
+            <button className={`np-fmt${editor.isActive("underline") ? " on" : ""}`} onClick={() => chain().toggleUnderline().run()} aria-label="Underline" title="Underline" aria-pressed={editor.isActive("underline")}>
+              <u>U</u>
+            </button>
+          </Group>
           <span className="np-sep" />
+          <Group label="Text colour">
           <span className="np-swatches" aria-label="Text colour">
             {NOTE_COLOURS.map((c, i) => (
               <button
@@ -220,7 +237,9 @@ export function Notepad({ notes, onNotes, onClose }) {
               />
             ))}
           </span>
+          </Group>
           <span className="np-sep" />
+          <Group label="Highlight">
           <span className="np-swatches" aria-label="Highlight">
             <button className={`np-sw np-sw-none${hl.color ? "" : " on"}`} onClick={() => chain().unsetHighlight().run()} aria-label="No highlight" title="No highlight" />
             {NOTE_HIGHLIGHTS.map((c, i) => (
@@ -234,13 +253,16 @@ export function Notepad({ notes, onNotes, onClose }) {
               />
             ))}
           </span>
+          </Group>
           <span className="np-sep" />
-          <button className="np-fmt" onClick={() => chain().undo().run()} disabled={!editor.can().undo()} aria-label="Undo" title="Undo">
-            ↶
-          </button>
-          <button className="np-fmt" onClick={() => chain().redo().run()} disabled={!editor.can().redo()} aria-label="Redo" title="Redo">
-            ↷
-          </button>
+          <Group label="Undo / Redo">
+            <button className="np-fmt" onClick={() => chain().undo().run()} disabled={!editor.can().undo()} aria-label="Undo" title="Undo">
+              ↶
+            </button>
+            <button className="np-fmt" onClick={() => chain().redo().run()} disabled={!editor.can().redo()} aria-label="Redo" title="Redo">
+              ↷
+            </button>
+          </Group>
         </div>
       )}
 

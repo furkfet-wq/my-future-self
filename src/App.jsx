@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useStore } from "./lib/store.js";
@@ -31,6 +31,7 @@ import { weekData, shiftKey, parseKey, dayStats, streak as perfectStreak, salahS
 import { useCloudSave } from "./lib/sync.js";
 import { ClockButton, ClockPanel, Ringer } from "./components/Clock.jsx";
 import { Notepad, NotepadButton } from "./components/Notepad.jsx";
+import { Calculator, CalculatorButton } from "./components/Calculator.jsx";
 import { dueAlarms } from "./lib/clock.js";
 import { alarmStart, alarmStop } from "./lib/sound.js";
 import Account from "./components/Account.jsx";
@@ -304,6 +305,8 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
   // Clock: alarms (saved with the account), timer + stopwatch + snooze (this device), checked every second.
   const [clockOpen, setClockOpen] = useState(false);
   const [notepadOpen, setNotepadOpen] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
+  const closeCalc = useCallback(() => setCalcOpen(false), []);
   const [timer, setTimer] = useLocal("mfs-timer-v1", { endsAt: null, pausedLeft: null, total: 0 });
   const [sw, setSw] = useLocal("mfs-stopwatch-v1", { startedAt: null, banked: 0, laps: [] });
   const [snooze, setSnooze] = useLocal("mfs-snooze-v1", null); // { at, label }
@@ -405,6 +408,7 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
         />
       )}
       {notepadOpen && <Notepad notes={state.notes} onNotes={actions.setNotes} onClose={() => setNotepadOpen(false)} />}
+      {calcOpen && <Calculator onClose={closeCalc} />}
       {ring && (
         <Ringer
           ring={ring}
@@ -499,6 +503,7 @@ export default function App({ user, startVersion, onSignOut, onSignOutEverywhere
             <>
               <ClockButton onClick={() => setClockOpen(true)} />
               <NotepadButton onClick={() => setNotepadOpen((o) => !o)} />
+              <CalculatorButton onClick={() => setCalcOpen((o) => !o)} />
             </>
           }
         />

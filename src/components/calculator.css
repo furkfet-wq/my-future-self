@@ -1,0 +1,33 @@
+/* Calculator button: the keys light up one by one on hover */
+.calc-btn .ck { fill: currentColor; stroke: none; transition: opacity 0.3s; }
+.calc-btn:hover .ck { animation: calc-blink 1.2s ease-in-out; }
+.calc-btn:hover .ck2 { animation-delay: 0.1s; }
+.calc-btn:hover .ck3 { animation-delay: 0.2s; }
+.calc-btn:hover .ck4 { animation-delay: 0.3s; }
+.calc-btn:hover .ck5 { animation-delay: 0.4s; }
+.calc-btn:hover .ck6 { animation-delay: 0.5s; }
+@keyframes calc-blink { 40% { opacity: 0.15; } }
+@media (prefers-reduced-motion: reduce) { .calc-btn:hover .ck { animation: none; } }
+
+/* Calculator window: above the notepad, so both can be open at once */
+.calc { position: fixed; z-index: 145; background: #000; color: #fff; border: var(--stroke) solid var(--fg); border-radius: 18px;
+  overflow: hidden; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.75); animation: calc-in 0.45s var(--rise); user-select: none; }
+@keyframes calc-in { from { opacity: 0; scale: 0.94; translate: 0 10px; } }
+.calc-bar { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 16px; border-bottom: var(--stroke) solid var(--line);
+  cursor: grab; touch-action: none; }
+.calc-bar b { flex: 1; font-size: 15px; font-weight: 900; font-stretch: 115%; }
+.calc-copy { font-size: 15px; }
+
+.calc-screen { padding: 14px 18px 10px; text-align: right; font-variant-numeric: tabular-nums; }
+.calc-prev, .calc-preview { min-height: 18px; font-size: 13px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calc-main { font-size: 40px; font-weight: 800; line-height: 1.15; margin: 4px 0; overflow-wrap: anywhere; user-select: text; }
+.calc-main.small { font-size: 24px; }
+
+.calc-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 4px 14px 16px; }
+.calc-key { height: 52px; border-radius: 14px; font-size: 20px; font-weight: 700; border: var(--stroke) solid var(--line);
+  transition: border-color 0.2s, background 0.2s, translate 0.5s var(--rise); }
+.calc-key:hover { border-color: var(--fg); translate: 0 -2px; }
+.calc-key.op { font-size: 24px; }
+.calc-key.eq { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.calc-key.hit { animation: calc-hit 0.25s ease-out; }
+@keyframes calc-hit { 40% { scale: 0.92; background: rgba(255, 255, 255, 0.25); } }

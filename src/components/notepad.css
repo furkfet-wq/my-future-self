@@ -26,7 +26,10 @@
 .np-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: var(--stroke) solid var(--line); }
 .np-tools select { background: #000; color: #fff; border: var(--stroke) solid var(--line); border-radius: 10px; padding: 7px 10px; font: inherit; font-size: 13px; }
 .np-tools select:focus { outline: none; border-color: var(--fg); }
-.np-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+.np-sep { width: 1px; height: 34px; background: var(--line); margin: 0 4px; align-self: flex-end; }
+.np-group { display: inline-flex; flex-direction: column; gap: 4px; }
+.np-lbl { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); padding-left: 2px; }
+.np-group-tools { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
 .np-fmt { min-width: 32px; height: 32px; border-radius: 8px; font-size: 15px; border: var(--stroke) solid transparent;
   transition: background 0.2s, border-color 0.2s, translate 0.4s var(--rise); }
 .np-fmt:hover:not(:disabled) { border-color: var(--line); translate: 0 -1px; }
